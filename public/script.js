@@ -61,7 +61,7 @@ function renderCube() {
     faceColors.forEach(color => {
       const colorDiv = document.createElement('div');
       colorDiv.classList.add('color-square');
-      // 使用視覺顏色進行渲染，但保留邏輯顏色
+      // 使用視覺顏色進行渲染
       colorDiv.style.backgroundColor = displayColors[color] || color;
       faceElement.appendChild(colorDiv);
     });
@@ -72,7 +72,6 @@ function renderCube() {
 // 設定選擇的顏色並更新界面
 function setColor(color) {
   currentColor = color;
-  // 更新按鈕選取狀態
   document.querySelectorAll('.color-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.color === color);
   });
@@ -93,7 +92,6 @@ function getCubeString() {
       cubeString += colorMap[color] || 'X';
     });
   });
-  // console.log('Generated cubeString:', cubeString);
   return cubeString;
 }
 
@@ -157,8 +155,6 @@ function loadRecord(record) {
   solutions = record.solutions;
   updateFormulaDisplay();
   updateAnimation();
-  
-  // 自動捲動到結果區
   document.getElementById('result-container').classList.remove('hidden');
 }
 
@@ -169,10 +165,9 @@ function clearRecords() {
   }
 }
 
-// --- Cross-Solver-V2 邏輯 (保留原樣) ---
+// --- Cross-Solver-V2 邏輯 ---
 
 const crossPieces = { w: 'UF', x: 'UL', y: 'UB', z: 'UR' };
-const crossColor = { w: 'green', x: 'orange', y: 'blue', z: 'red' };
 const MOVE_TABLES = {
   "U": {"UF":"UL","UL":"UB","UB":"UR","UR":"UF","FU":"LU","LU":"BU","BU":"RU","RU":"FU"},
   "U'":{"UF":"UR","UR":"UB","UB":"UL","UL":"UF","FU":"RU","RU":"BU","BU":"LU","LU":"FU"},
@@ -307,8 +302,9 @@ async function getCubeSolution() {
     return;
   }
 
+  // 立即顯示載入狀態
   resultContainer.classList.remove('hidden');
-  resultDiv.innerText = '計算中...';
+  resultDiv.innerHTML = '<span style="color:#666">⟳ 正在雲端計算公式中，請稍候...</span>';
 
   try {
     const response = await fetch('/solve', {
@@ -334,8 +330,9 @@ async function getCubeSolution() {
     solutions.whiteCross = solveWhiteCross(solutions.reverse);
     solutions.scramble = solutions.reverse;
 
-    if (solutions.whiteCross.includes('失敗')) {
-      throw new Error('白十字解法計算失敗');
+    if (solutions.whiteCross && solutions.whiteCross.includes('失敗')) {
+       // 如果白十字本地計算失敗，至少顯示還原步驟
+       console.warn('White cross failed');
     }
 
     updateFormulaDisplay();
@@ -377,7 +374,7 @@ function updateAnimation() {
   updateFormulaDisplay();
 }
 
-// --- 相機邏輯 (已還原至最嚴謹的原始版本) ---
+// --- 相機邏輯 (嚴格還原) ---
 
 async function startCamera() {
   currentFaceIndex = 0;
@@ -390,7 +387,6 @@ async function startCamera() {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
-    // 使用 environment facing mode
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
@@ -398,7 +394,6 @@ async function startCamera() {
 
     await new Promise(resolve => {
       video.onloadedmetadata = () => {
-        // 設定 Canvas 尺寸與 Video 渲染尺寸一致
         const w = video.videoWidth;
         const h = video.videoHeight;
         gridCanvas.width = w;
@@ -412,7 +407,7 @@ async function startCamera() {
     drawGrid();
     startRealTimeDetection();
   } catch (error) {
-    alert('無法啟動相機，請檢查權限或設備。');
+    alert('無法啟動相機，請檢查權限。');
     console.error('Camera error:', error);
   }
 }
@@ -431,26 +426,21 @@ function drawGrid() {
   const gridCanvas = document.getElementById('grid-canvas');
   const ctx = gridCanvas.getContext('2d');
   
-  if (gridCanvas.width < 50 || gridCanvas.height < 50) return;
-  
+  // 清除並重繪網格 (白色線條)
   ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
   ctx.strokeStyle = 'white';
   ctx.lineWidth = 2;
 
-  // 使用響應式計算確保在各裝置置中，但保留與後續計算一致的邏輯
   const size = Math.min(gridCanvas.width, gridCanvas.height) * 0.6;
   const gridSize = size / 3;
   const offsetX = (gridCanvas.width - size) / 2;
   const offsetY = (gridCanvas.height - size) / 2;
 
-  // 畫井字
   for (let i = 1; i < 3; i++) {
-    // 垂直線
     ctx.beginPath();
     ctx.moveTo(offsetX + i * gridSize, offsetY);
     ctx.lineTo(offsetX + i * gridSize, offsetY + size);
     ctx.stroke();
-    // 水平線
     ctx.beginPath();
     ctx.moveTo(offsetX, offsetY + i * gridSize);
     ctx.lineTo(offsetX + size, offsetY + i * gridSize);
@@ -466,55 +456,62 @@ function captureFace() {
   canvas.width = gridCanvas.width;
   canvas.height = gridCanvas.height;
   const ctx = canvas.getContext('2d');
-  const faceIndicator = document.getElementById('face-indicator');
-
+  
   if (!video.srcObject) return;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // 重新計算 Grid 參數
   const size = Math.min(canvas.width, canvas.height) * 0.6;
   const gridSize = size / 3;
   const offsetX = (canvas.width - size) / 2;
   const offsetY = (canvas.height - size) / 2;
 
-  const colors = [];
-
-  // [還原] 原始中心點檢測邏輯 (嚴格檢查亮度和飽和度)
-  const centerPixelData = ctx.getImageData(offsetX + gridSize + gridSize * 0.25, offsetY + gridSize + gridSize * 0.25, gridSize * 0.5, gridSize * 0.5);
-  let rSum = 0, gSum = 0, bSum = 0;
+  // 1. 檢測中心點亮度與飽和度 (確認是否對準)
+  // 注意：offsetX + gridSize + ... 取的是九宮格正中間的格子
+  const centerPixelData = ctx.getImageData(
+    offsetX + gridSize + gridSize * 0.25, 
+    offsetY + gridSize + gridSize * 0.25, 
+    gridSize * 0.5, 
+    gridSize * 0.5
+  );
+  
+  let rSum=0, gSum=0, bSum=0;
   for (let i = 0; i < centerPixelData.data.length; i += 4) {
     rSum += centerPixelData.data[i];
     gSum += centerPixelData.data[i + 1];
     bSum += centerPixelData.data[i + 2];
   }
   const count = centerPixelData.data.length / 4;
+  // 這裡計算出的 centerR/G/B 是 0-255
   const centerR = rSum / count;
   const centerG = gSum / count;
   const centerB = bSum / count;
-  const [centerH, centerS, centerV] = rgbToHsv(centerR/255, centerG/255, centerB/255);
   
+  // 修正：rgbToHsv 函數內部會除以 255，所以這裡直接傳 0-255 即可
+  const [centerH, centerS, centerV] = rgbToHsv(centerR, centerG, centerB);
+  
+  // 如果太亮(接近白)且飽和度極低，可能是拍到白牆或未對準
   if (centerV > 80 && centerS < 20) {
-    alert('請先對準魔方再拍照！');
+    alert('請先對準魔方再拍照！(中心過白/亮)');
     return;
   }
 
-  // [還原] 原始遍歷取樣邏輯 (取方格中央 50% 區域平均，非僅 10x10)
+  const colors = [];
   for (let y = 0; y < 3; y++) {
     for (let x = 0; x < 3; x++) {
-      const pixelData = ctx.getImageData(offsetX + x * gridSize + gridSize * 0.25, offsetY + y * gridSize + gridSize * 0.25, gridSize * 0.5, gridSize * 0.5);
-      let rSum = 0, gSum = 0, bSum = 0;
+      const pixelData = ctx.getImageData(
+        offsetX + x * gridSize + gridSize * 0.25, 
+        offsetY + y * gridSize + gridSize * 0.25, 
+        gridSize * 0.5, 
+        gridSize * 0.5
+      );
+      let rSum=0, gSum=0, bSum=0;
       for (let i = 0; i < pixelData.data.length; i += 4) {
         rSum += pixelData.data[i];
         gSum += pixelData.data[i + 1];
         bSum += pixelData.data[i + 2];
       }
       const count = pixelData.data.length / 4;
-      const r = rSum / count;
-      const g = gSum / count;
-      const b = bSum / count;
-      // 注意: rgbToHsv 這裡原始碼預期 0-255 輸入，但我的 rgbToHsv 函數裡面有 /255。
-      // 檢查原始碼: 原始 `rgbToHsv` 第一行是 `r /= 255`。所以這裡傳入 0-255 數值是對的。
-      const color = detectColor(r, g, b);
+      const color = detectColor(rSum/count, gSum/count, bSum/count);
       colors.push(color);
     }
   }
@@ -525,7 +522,8 @@ function captureFace() {
 
   currentFaceIndex++;
   if (currentFaceIndex < faceOrder.length) {
-    faceIndicator.innerText = faceIndicators[faceOrder[currentFaceIndex]];
+    document.getElementById('face-indicator').innerText = faceIndicators[faceOrder[currentFaceIndex]];
+    // 視覺回饋
     const overlay = document.querySelector('.camera-overlay');
     overlay.style.backgroundColor = 'rgba(255,255,255,0.5)';
     setTimeout(() => overlay.style.backgroundColor = 'transparent', 100);
@@ -536,7 +534,7 @@ function captureFace() {
   }
 }
 
-// 顏色檢測邏輯 (嚴格保留原始 HSV 範圍)
+// 顏色檢測
 function detectColor(r, g, b) {
   const [h, s, v] = rgbToHsv(r, g, b);
   const colorRanges = {
@@ -579,22 +577,24 @@ function rgbToHsv(r, g, b) {
   return [h * 360, s * 100, v * 100];
 }
 
-// 自動檢測邏輯 (還原精確取樣)
+// 自動檢測邏輯 (嚴格還原)
 let animationFrameId = null;
 function startRealTimeDetection() {
   const video = document.getElementById('video');
   const gridCanvas = document.getElementById('grid-canvas');
   const ctx = gridCanvas.getContext('2d');
   
+  // 暫存用的 Canvas (不顯示)
   const tempCanvas = document.createElement('canvas');
   
   let frameCount = 0;
-  const requiredFrames = 30; // 穩定幀數
+  const requiredFrames = 30; // 穩定幀數閾值
   let lastColors = null;
 
   function detectAndDraw() {
     if (!video.srcObject || !document.getElementById('camera-container').offsetParent) return;
 
+    // 確保暫存 Canvas 尺寸正確
     if (tempCanvas.width !== gridCanvas.width) {
       tempCanvas.width = gridCanvas.width;
       tempCanvas.height = gridCanvas.height;
@@ -602,6 +602,7 @@ function startRealTimeDetection() {
     const tempCtx = tempCanvas.getContext('2d');
     tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
     
+    // 每次都重繪網格 (清除上一幀的彩色框)
     drawGrid();
 
     const size = Math.min(gridCanvas.width, gridCanvas.height) * 0.6;
@@ -614,8 +615,13 @@ function startRealTimeDetection() {
 
     for (let y = 0; y < 3; y++) {
       for (let x = 0; x < 3; x++) {
-        // [還原] 使用大面積取樣 (gridSize * 0.5) 提高即時偵測準確度
-        const pixelData = tempCtx.getImageData(offsetX + x * gridSize + gridSize * 0.25, offsetY + y * gridSize + gridSize * 0.25, gridSize * 0.5, gridSize * 0.5);
+        // 取樣：取方格中央 50% 範圍
+        const pixelData = tempCtx.getImageData(
+          offsetX + x * gridSize + gridSize * 0.25, 
+          offsetY + y * gridSize + gridSize * 0.25, 
+          gridSize * 0.5, 
+          gridSize * 0.5
+        );
         
         let rSum=0, gSum=0, bSum=0;
         for (let i=0; i<pixelData.data.length; i+=4) {
@@ -623,20 +629,25 @@ function startRealTimeDetection() {
         }
         const count = pixelData.data.length / 4;
         const r = rSum/count, g = gSum/count, b = bSum/count;
-        const [h, s, v] = rgbToHsv(r, g, b); // 這裡 r,g,b 是 0-255，傳入 rgbToHsv 正常
+        
+        // 修正：傳入 0-255，不要預先除以 255
+        const [h, s, v] = rgbToHsv(r, g, b);
         const color = detectColor(r, g, b);
         colors.push(color);
 
         if (color !== 'white' || s > 20) isAllWhite = false;
 
+        // 畫出即時偵測框
         ctx.strokeStyle = displayColors[color] || color;
         ctx.lineWidth = 4;
         ctx.strokeRect(offsetX + x * gridSize + 4, offsetY + y * gridSize + 4, gridSize - 8, gridSize - 8);
       }
     }
 
+    // 穩定檢測鎖定邏輯
     if (lastColors && colors.every((c, i) => c === lastColors[i])) {
       frameCount++;
+      // 如果顏色穩定且不是全白 (防誤判)，就鎖定
       if (frameCount >= requiredFrames && !isAllWhite) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
