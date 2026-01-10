@@ -5,6 +5,7 @@ export class CameraScanner {
         this.video = document.getElementById('camera-video');
         this.canvas = document.getElementById('camera-canvas');
         this.modal = document.getElementById('camera-modal');
+        this.gridOverlay = document.getElementById('preview-grid'); // 取得介面上的九宮格元素
         this.stream = null;
     }
 
@@ -33,36 +34,69 @@ export class CameraScanner {
         this.modal.classList.add('hidden');
     }
 
-    // 只回傳顏色，不處理 UI 或狀態
+    // 核心修改：精準映射視覺網格到原始影片座標
     getScanColors() {
         if (!this.stream || this.video.readyState !== this.video.HAVE_ENOUGH_DATA) return null;
 
         const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+        
+        // 1. 取得原始影片解析度
         const vWidth = this.video.videoWidth;
         const vHeight = this.video.videoHeight;
         
-        // 只需在尺寸改變時調整
+        // 確保 Canvas 與原始影片尺寸一致
         if (this.canvas.width !== vWidth) this.canvas.width = vWidth;
         if (this.canvas.height !== vHeight) this.canvas.height = vHeight;
         
         ctx.drawImage(this.video, 0, 0, vWidth, vHeight);
 
-        // 計算九宮格採樣點 (假設九宮格位於畫面正中央，佔據約短邊的 60%)
-        const size = Math.min(vWidth, vHeight) * 0.6; 
-        const startX = (vWidth - size) / 2;
-        const startY = (vHeight - size) / 2;
-        const cellSize = size / 3;
+        // 2. 取得 DOM 元素的實際顯示尺寸與位置
+        // 這是解決「對不準」與「需要貼近」的關鍵：計算 CSS object-fit: cover 的縮放比例
+        const videoRect = this.video.getBoundingClientRect();
+        const gridRect = this.gridOverlay.getBoundingClientRect();
+
+        // 計算 CSS 像素與原始影片像素的縮放比例
+        // object-fit: cover 會以較大的比例填滿容器
+        const scaleX = videoRect.width / vWidth;
+        const scaleY = videoRect.height / vHeight;
+        const renderScale = Math.max(scaleX, scaleY); // 這是 "1個原始像素 = 多少螢幕像素"
+
+        // 3. 將介面上的九宮格(CSS座標) 轉換為 影片原始座標(Source座標)
+        // 計算九宮格在影片內的實際寬度 (原始像素)
+        const sourceGridSize = gridRect.width / renderScale;
+        
+        // 計算偏移量：九宮格中心點相對於影片中心點的偏移
+        // (介面上的中心點差異 / 縮放比例)
+        const videoCenterX = videoRect.left + videoRect.width / 2;
+        const videoCenterY = videoRect.top + videoRect.height / 2;
+        const gridCenterX = gridRect.left + gridRect.width / 2;
+        const gridCenterY = gridRect.top + gridRect.height / 2;
+
+        const offsetX = (gridCenterX - videoCenterX) / renderScale;
+        const offsetY = (gridCenterY - videoCenterY) / renderScale;
+
+        // 計算原始影片上的起始採樣座標 (左上角)
+        // 原始中心 (vWidth/2) + 偏移 - 半個網格寬
+        const startX = (vWidth / 2) + offsetX - (sourceGridSize / 2);
+        const startY = (vHeight / 2) + offsetY - (sourceGridSize / 2);
+        const cellSize = sourceGridSize / 3;
 
         const capturedColors = [];
 
         for (let row = 0; row < 3; row++) {
             for (let col = 0; col < 3; col++) {
                 // 取每個格子的中心點
-                const x = startX + col * cellSize + cellSize / 2;
-                const y = startY + row * cellSize + cellSize / 2;
+                const cx = Math.floor(startX + col * cellSize + cellSize / 2);
+                const cy = Math.floor(startY + row * cellSize + cellSize / 2);
                 
+                // 邊界檢查：防止讀取超出範圍導致錯誤
+                if (cx < 0 || cx >= vWidth || cy < 0 || cy >= vHeight) {
+                    capturedColors.push(0xFFFFFF); // 超出範圍預設白色
+                    continue;
+                }
+
                 // 取樣 5x5 區域平均色
-                const pixelData = ctx.getImageData(x - 2, y - 2, 5, 5).data;
+                const pixelData = ctx.getImageData(Math.max(0, cx - 2), Math.max(0, cy - 2), 5, 5).data;
                 const rgb = this.getAverageRGB(pixelData);
                 const colorVal = this.classifyColor(rgb);
                 capturedColors.push(colorVal);
@@ -82,7 +116,7 @@ export class CameraScanner {
         return { r: r/count, g: g/count, b: b/count };
     }
 
-    // 依據提供的參數表進行 HSV 顏色分類
+    // 依據「相機顏色參數.txt」移植的 HSV 判斷邏輯
     classifyColor({r, g, b}) {
         const [h, s, v] = this.rgbToHsv(r, g, b);
 
@@ -106,11 +140,11 @@ export class CameraScanner {
             'white': 0xFFFFFF
         };
 
-        // 迭代判斷顏色 
+        // 迭代判斷顏色，包含紅色的跨度處理 
         for (const [color, range] of Object.entries(colorRanges)) {
             let hInRange;
             if (color === 'red') {
-                // 紅色跨越 360-0 度
+                // 紅色跨越 360-0 度 (350~360 或 0~5)
                 hInRange = (h >= range.h[0] && h <= 360) || (h >= 0 && h <= range.h[1]);
             } else {
                 hInRange = h >= range.h[0] && h <= range.h[1];
