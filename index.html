@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>魔方底十字求解器</title>
+    <link rel="icon" href="data:,">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
@@ -22,16 +23,22 @@
         <video id="camera-video" autoplay playsinline></video>
         <canvas id="camera-canvas" style="display:none;"></canvas>
         <div class="scan-overlay">
+            <div class="scan-header">
+                <h3 id="scan-step-title">準備掃描</h3>
+                <p id="scan-step-desc">請依照指示對準面</p>
+            </div>
             <div class="scan-grid">
                 <div></div><div></div><div></div>
                 <div></div><div></div><div></div>
                 <div></div><div></div><div></div>
             </div>
-            <div class="scan-message">請將中心塊對準九宮格中央</div>
+            <div class="scan-progress-dots" id="scan-dots">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
         </div>
         <div class="camera-controls">
             <button class="btn btn-reset" onclick="window.closeCamera()">取消</button>
-            <button class="btn btn-calc" onclick="window.captureFace()">📸 掃描並填色</button>
+            <button class="btn btn-calc" id="btn-capture" onclick="window.captureFace()">📸 掃描並下一步</button>
         </div>
     </div>
 </div>
@@ -73,9 +80,9 @@
                 <p>操作說明：</p>
                 <ul style="padding-left: 16px; margin: 5px 0;">
                     <li>先在右側選擇顏色或使用相機</li>
-                    <li>點擊 3D 方塊填色</li>
+                    <li>相機模式將依序引導掃描 6 面</li>
+                    <li>點擊 3D 方塊可手動修正顏色</li>
                     <li>按下「開始計算」</li>
-                    <li>左側觀看動畫演示</li>
                 </ul>
             </div>
         </div>

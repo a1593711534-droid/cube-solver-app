@@ -84,7 +84,6 @@ body {
     font-weight: 600;
 }
 
-/* 下拉選單樣式修復 */
 .select-wrapper {
     position: relative;
 }
@@ -93,7 +92,7 @@ body {
     width: 100%;
     background-color: #1a1a1a;
     border: 1px solid #444;
-    color: #fff; /* 輸入框文字白色 */
+    color: #fff;
     padding: 12px;
     border-radius: 8px;
     font-size: 14px;
@@ -109,7 +108,6 @@ body {
     outline: none;
 }
 
-/* 修復選項文字顏色 */
 .styled-select option {
     background-color: #1a1a1a;
     color: #ffffff;
@@ -127,14 +125,12 @@ body {
     pointer-events: none;
 }
 
-/* 提示文字 */
 .hint-text {
     font-size: 12px;
     color: #666;
     line-height: 1.5;
 }
 
-/* 按鈕 */
 .action-buttons {
     margin-top: auto;
     display: flex;
@@ -183,16 +179,13 @@ body {
     font-family: var(--font-mono);
 }
 
-/* --- 右側主區域 --- */
 .main-column {
     display: grid;
-    /* 上下分割：上方固定高度(或比例)，下方自適應 */
-    grid-template-rows: 25% 75%; /* 調整比例，留更多空間給下方 */
+    grid-template-rows: 25% 75%;
     height: 100vh;
     overflow: hidden;
 }
 
-/* --- 區域 2: 公式顯示區 --- */
 .panel-solution {
     background-color: #0d0d0d;
     border-bottom: 1px solid var(--panel-border);
@@ -259,7 +252,6 @@ body {
     border: 1px solid #333;
 }
 
-/* --- 區域 3: 工作區 (Split View: Player + Input) --- */
 .panel-3d {
     background-color: #000;
     position: relative;
@@ -278,14 +270,13 @@ body {
     flex-shrink: 0;
 }
 
-/* 分割容器 */
 .workspace-wrapper {
     display: flex;
     flex-direction: row;
     gap: 16px;
     flex-grow: 1;
     height: 100%;
-    min-height: 0; /* 重要：防止 flex overflow */
+    min-height: 0;
 }
 
 .workspace-split {
@@ -310,7 +301,6 @@ body {
     pointer-events: none;
 }
 
-/* 左側：動畫播放器樣式調整 */
 .left-pane {
     background: radial-gradient(circle at center, #151515 0%, #080808 100%);
     display: flex;
@@ -321,14 +311,12 @@ body {
 twisty-player {
     width: 100%;
     height: 100%;
-    /* UI 優化：背景加深加亮，確保灰色按鈕可見 */
     --twisty-player-control-panel-background: rgba(60, 60, 60, 0.95);
     --twisty-player-foreground-color: #ffffff;
     --twisty-player-button-fill: #ffffff;
-    --twisty-player-button-disabled-fill: #AAAAAA; /* 強制設定灰色填滿 */
+    --twisty-player-button-disabled-fill: #AAAAAA;
 }
 
-/* 右側：輸入區 */
 .right-pane {
     display: flex;
     flex-direction: column;
@@ -342,11 +330,10 @@ twisty-player {
     overflow: hidden;
 }
 
-/* 旋轉控制項 */
 .rotate-controls {
     position: absolute;
     top: 16px;
-    right: 16px; /* 移到右上角避免擋到色盤 */
+    right: 16px; 
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -377,7 +364,6 @@ twisty-player {
 .rot-btn:active { background: var(--accent-color); color: #000; }
 .spacer { width: 32px; visibility: hidden; }
 
-/* 移至下方的色盤樣式 */
 .palette-container {
     padding: 12px;
     background: #111;
@@ -385,7 +371,7 @@ twisty-player {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    flex-shrink: 0; /* 防止被壓縮 */
+    flex-shrink: 0;
 }
 
 .palette-container label {
@@ -418,7 +404,7 @@ twisty-player {
     z-index: 2;
 }
 
-/* --- Camera Modal Styles (新增) --- */
+/* --- Camera Modal Styles (改進版) --- */
 .camera-modal {
     position: fixed;
     top: 0;
@@ -457,11 +443,33 @@ twisty-player {
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* 讓點擊事件穿透 */
+    pointer-events: none;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+/* 新增：相機標題區域 */
+.scan-header {
+    position: absolute;
+    top: 40px;
+    text-align: center;
+    background: rgba(0,0,0,0.6);
+    padding: 10px 20px;
+    border-radius: 8px;
+    width: 80%;
+}
+.scan-header h3 {
+    margin: 0;
+    font-family: var(--font-tech);
+    color: var(--accent-color);
+    font-size: 20px;
+}
+.scan-header p {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+    color: #eee;
 }
 
 .scan-grid {
@@ -478,14 +486,22 @@ twisty-player {
     border: 1px solid rgba(0, 229, 255, 0.3);
 }
 
-.scan-message {
+/* 新增：掃描進度點 */
+.scan-progress-dots {
     margin-top: 20px;
-    background: rgba(0,0,0,0.7);
-    padding: 8px 16px;
-    border-radius: 20px;
-    color: #fff;
-    font-family: var(--font-ui);
-    font-size: 14px;
+    display: flex;
+    gap: 10px;
+}
+.scan-progress-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #444;
+    transition: background 0.3s;
+}
+.scan-progress-dots span.active {
+    background: var(--accent-color);
+    box-shadow: 0 0 5px var(--accent-color);
 }
 
 .camera-controls {
@@ -502,10 +518,9 @@ twisty-player {
 .camera-controls .btn {
     flex: 1;
     max-width: 200px;
+    pointer-events: auto; /* 確保按鈕可點擊 */
 }
 
-
-/* --- 響應式設計 (手機/平板) --- */
 @media (max-width: 900px) {
     .app-grid {
         grid-template-columns: 1fr;
@@ -514,17 +529,15 @@ twisty-player {
         overflow-y: auto;
     }
 
-    /* 調整順序: 公式 -> 3D(含動畫) -> 控制面板 */
     .panel-controls { order: 3; border-right: none; border-top: 1px solid var(--panel-border); padding: 16px; max-height: none; }
     .main-column { order: 1; display: contents; }
     
     .panel-solution { order: 1; padding: 16px; min-height: auto; }
     
-    /* 手機版將分割視圖改為上下排列，或者透過 Tab 切換 (這裡採用上下堆疊) */
     .panel-3d { 
         order: 2; 
         height: auto; 
-        min-height: 500px; /* 給予足夠高度放兩個方塊 */
+        min-height: 500px;
         padding: 10px;
     }
 
@@ -536,7 +549,6 @@ twisty-player {
         min-height: 250px;
     }
 
-    /* 手機版字體調整 */
     #solution-text { font-size: 2.2rem; }
     
     .control-section { flex-direction: row; flex-wrap: wrap; gap: 12px; }
