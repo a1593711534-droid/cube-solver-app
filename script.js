@@ -47,15 +47,17 @@ let isAnimating = false;
 let targetRotX = 0; 
 let targetRotY = 0;
 
+// 新增：用來儲存當前的 WCA 打亂公式
+let currentScramble = "";
+
 /* =========================================================
    2. 初始化與 3D 建置
    ========================================================= */
-// 注意：init() 與 animate() 已移至檔案最末端執行，確保所有函數已定義
 
 function init() {
     const container = document.getElementById('canvas-wrapper');
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x121212); // 與 style.css 背景一致
+    scene.background = new THREE.Color(0x121212); 
     camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
     camera.position.z = 10; 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -79,7 +81,6 @@ function init() {
     targetRotX = 0.2;
     targetRotY = -0.3;
 
-    // 初始化下拉選單 (現在這裡呼叫是安全的，因為函數定義已被提升)
     updateFacingOptions();
 }
 
@@ -88,7 +89,6 @@ function createCube() {
     const geometry = new THREE.BoxGeometry(0.94, 0.94, 0.94); 
     const coreMat = new THREE.MeshBasicMaterial({ color: 0x000000 }); 
     
-    // 重點：確保材質順序一致 R L U D F B (0-5)
     for(let x=-1; x<=1; x++) {
         for(let y=-1; y<=1; y++) {
             for(let z=-1; z<=1; z++) {
@@ -113,7 +113,7 @@ function createCube() {
 
                 const mesh = new THREE.Mesh(geometry, finalMats);
                 mesh.position.set(x, y, z);
-                mesh.userData = { x, y, z }; // 重要：儲存邏輯座標
+                mesh.userData = { x, y, z }; 
                 cubeGroup.add(mesh);
             }
         }
@@ -198,14 +198,17 @@ function onPointerDown(event) {
     if (intersects.length > 0) {
         const hit = intersects[0];
         const matIndex = hit.face.materialIndex;
-        // 只有非黑色的面可以填色
         if (hit.object.material[matIndex].color.getHex() !== 0x000000) {
             hit.object.material[matIndex].color.setHex(currentColorHex);
+            
+            // 重要：如果是手動填色，清除當前的隨機打亂記錄，
+            // 這樣 Solve 時就會切換回「手動模式」的動畫邏輯。
+            currentScramble = "";
+            document.getElementById('scramble-text').innerText = "手動修改中...";
         }
     }
 }
 
-// 修改定義方式：先定義標準函數，確保內部可以互相呼叫
 function resetColors() {
     scene.remove(cubeGroup);
     createCube();
@@ -214,11 +217,13 @@ function resetColors() {
     cubeGroup.rotation.x = targetRotX;
     cubeGroup.rotation.y = targetRotY;
     
+    // 清除打亂記錄
+    currentScramble = "";
+
     document.getElementById('solution-text').innerText = "已重置";
     document.getElementById('solution-text').style.color = "#FFD60A";
     document.getElementById('scramble-text').innerText = "";
     
-    // 重置動畫播放器
     const player = document.getElementById('solution-player');
     if(player) {
         player.alg = "";
@@ -247,43 +252,44 @@ function updateFacingOptions() {
     } else {
         facingSelect.value = validOptions[0];
     }
-    handleModeChange(); // 內部呼叫現在是安全的
+    handleModeChange();
 }
 
 function handleModeChange() {
     const text = document.getElementById('solution-text');
     text.innerText = "設定已變更，請按計算";
     text.style.color = "#FFD60A";
-    document.getElementById('scramble-text').innerText = "";
+    // 如果切換視角，也視為變更，但不一定要清除 Scramble，
+    // 不過為了邏輯簡單，保留 Scramble 字串，但文字介面可能需要 Solve 後更新
 }
 
 /* =========================================================
-   4. 打亂邏輯 (SCRAMBLE LOGIC) - 新增功能
+   4. 打亂邏輯 (SCRAMBLE LOGIC)
    ========================================================= */
 
-// 1. 生成打亂
 async function generateAndApplyScramble() {
     try {
         const text = document.getElementById('solution-text');
         text.innerText = "打亂中...";
         
-        // 從 cubing.js 獲取隨機打亂
         const scrambleObj = await randomScrambleForEvent("333");
         const scrambleStr = scrambleObj.toString();
         
-        // 顯示打亂公式
-        document.getElementById('scramble-text').innerText = "Scramble: " + scrambleStr;
+        // 儲存打亂公式到全域變數
+        currentScramble = scrambleStr;
+
+        // 立即顯示打亂公式
+        document.getElementById('scramble-text').innerHTML = 
+            `<strong>Scramble:</strong> ${scrambleStr}`;
+
         text.innerText = "已打亂";
         
-        // 2. 重置方塊至初始狀態
         scene.remove(cubeGroup);
         createCube();
         
-        // 保持視角
         cubeGroup.rotation.x = targetRotX;
         cubeGroup.rotation.y = targetRotY;
 
-        // 3. 解析並應用打亂
         applyScrambleToThreeJS(scrambleStr);
         
     } catch (e) {
@@ -292,42 +298,25 @@ async function generateAndApplyScramble() {
     }
 }
 
-// 解析打亂字串並執行移動
 function applyScrambleToThreeJS(scrambleStr) {
-    // 將公式拆解，例如 "R U R'" -> ["R", "U", "R'"]
     const moves = scrambleStr.trim().split(/\s+/);
-    
     moves.forEach(move => {
-        // 解析移動基底 (R, L, U...) 和修飾符 (', 2)
         let base = move[0];
         let modifier = move.length > 1 ? move[1] : "";
-        
         let turns = 1;
-        if (modifier === "'") turns = 3; // 逆時針 = 順時針轉3次
+        if (modifier === "'") turns = 3;
         else if (modifier === "2") turns = 2;
         
-        // 執行 N 次 90度轉動
         for(let i=0; i<turns; i++) {
             performLayerRotation(base);
         }
     });
 }
 
-// 核心：在 Three.js 物件上執行邏輯層轉
 function performLayerRotation(faceChar) {
-    const axisInfo = {
-        'U': { axis: 'y', val: 1,  rot: 'cw' },
-        'D': { axis: 'y', val: -1, rot: 'ccw' },
-        'R': { axis: 'x', val: 1,  rot: 'cw' },
-        'L': { axis: 'x', val: -1, rot: 'ccw' },
-        'F': { axis: 'z', val: 1,  rot: 'cw' },
-        'B': { axis: 'z', val: -1, rot: 'ccw' }
-    };
-    
     let meshes = [];
     cubeGroup.children.forEach(m => meshes.push(m));
     
-    // 篩選目標層
     let targetMeshes = [];
     
     if (faceChar === 'U') targetMeshes = meshes.filter(m => Math.round(m.userData.y) === 1);
@@ -341,56 +330,36 @@ function performLayerRotation(faceChar) {
         let x = mesh.userData.x;
         let y = mesh.userData.y;
         let z = mesh.userData.z;
-        let mat = mesh.material; // Array of 6 materials
+        let mat = mesh.material;
         
         let newX = x, newY = y, newZ = z;
-        let newMat = [...mat]; // Copy current assignment
+        let newMat = [...mat];
 
-        // 旋轉邏輯
         if (faceChar === 'U') {
             newX = -z; newZ = x;
-            newMat[1] = mat[4]; // L takes F
-            newMat[5] = mat[1]; // B takes L
-            newMat[0] = mat[5]; // R takes B
-            newMat[4] = mat[0]; // F takes R
+            newMat[1] = mat[4]; newMat[5] = mat[1]; newMat[0] = mat[5]; newMat[4] = mat[0];
         }
         else if (faceChar === 'D') {
             newX = z; newZ = -x;
-            newMat[0] = mat[4]; // R takes F
-            newMat[5] = mat[0]; // B takes R
-            newMat[1] = mat[5]; // L takes B
-            newMat[4] = mat[1]; // F takes L
+            newMat[0] = mat[4]; newMat[5] = mat[0]; newMat[1] = mat[5]; newMat[4] = mat[1];
         }
         else if (faceChar === 'R') {
             newY = z; newZ = -y;
-            newMat[2] = mat[4]; // U takes F
-            newMat[5] = mat[2]; // B takes U
-            newMat[3] = mat[5]; // D takes B
-            newMat[4] = mat[3]; // F takes D
+            newMat[2] = mat[4]; newMat[5] = mat[2]; newMat[3] = mat[5]; newMat[4] = mat[3];
         }
         else if (faceChar === 'L') {
             newY = -z; newZ = y;
-            newMat[3] = mat[4]; // D takes F
-            newMat[5] = mat[3]; // B takes D
-            newMat[2] = mat[5]; // U takes B
-            newMat[4] = mat[2]; // F takes U
+            newMat[3] = mat[4]; newMat[5] = mat[3]; newMat[2] = mat[5]; newMat[4] = mat[2];
         }
         else if (faceChar === 'F') {
             newX = y; newY = -x;
-            newMat[0] = mat[2]; // R takes U
-            newMat[3] = mat[0]; // D takes R
-            newMat[1] = mat[3]; // L takes D
-            newMat[2] = mat[1]; // U takes L
+            newMat[0] = mat[2]; newMat[3] = mat[0]; newMat[1] = mat[3]; newMat[2] = mat[1];
         }
         else if (faceChar === 'B') {
             newX = -y; newY = x;
-            newMat[1] = mat[2]; // L takes U
-            newMat[3] = mat[1]; // D takes L
-            newMat[0] = mat[3]; // R takes D
-            newMat[2] = mat[0]; // U takes R
+            newMat[1] = mat[2]; newMat[3] = mat[1]; newMat[0] = mat[3]; newMat[2] = mat[0];
         }
 
-        // 應用更新
         mesh.userData.x = newX;
         mesh.userData.y = newY;
         mesh.userData.z = newZ;
@@ -406,7 +375,6 @@ function performLayerRotation(faceChar) {
 
 const C_W = 0, C_Y = 1, C_G = 2, C_R = 3, C_O = 4, C_B = 5;
 
-// 將 Hex 轉為內部顏色 ID
 function getHexId(hex) {
     if(hex === 0xFFFFFF) return C_W;
     if(hex === 0xFFFF00) return C_Y;
@@ -417,22 +385,15 @@ function getHexId(hex) {
     return -1;
 }
 
-// colorPerm 邏輯 (索引: 0:R, 1:L, 2:U, 3:D, 4:F, 5:B)
-// coord 邏輯: 根據旋轉後的位置，反推去哪裡讀取原始方塊的顏色
 const ROTATION_LOGIC = {
     'y': { coord: (x,y,z) => ({x: -z, y: y, z: x}), colorPerm: [5, 4, 2, 3, 0, 1] },
     "y'": { coord: (x,y,z) => ({x: z, y: y, z: -x}), colorPerm: [4, 5, 2, 3, 1, 0] },
     'y2': { coord: (x,y,z) => ({x: -x, y: y, z: -z}), colorPerm: [1, 0, 2, 3, 5, 4] },
     'z2': { coord: (x,y,z) => ({x: -x, y: -y, z: z}), colorPerm: [1, 0, 3, 2, 4, 5] },
-    
     'x': { coord: (x,y,z) => ({x: x, y: z, z: -y}), colorPerm: [0, 1, 4, 5, 3, 2] }, 
-    
     "x'": { coord: (x,y,z) => ({x: x, y: -z, z: y}), colorPerm: [0, 1, 5, 4, 2, 3] },
-    
     'x2': { coord: (x,y,z) => ({x: x, y: -y, z: -z}), colorPerm: [0, 1, 3, 2, 5, 4] },
-    
     'z': { coord: (x,y,z) => ({x: y, y: -x, z: z}), colorPerm: [2, 3, 1, 0, 4, 5] },
-    
     "z'": { coord: (x,y,z) => ({x: -y, y: x, z: z}), colorPerm: [3, 2, 0, 1, 4, 5] }
 };
 
@@ -456,7 +417,6 @@ function transformEdges(edges, rotSeq) {
         }
 
         let nC = { x: -1, y: -1, z: -1 };
-        // 映射：0:R, 1:L, 2:U, 3:D, 4:F, 5:B
         if(currPos.x===1) nC.x = currColors[0]; if(currPos.x===-1) nC.x = currColors[1];
         if(currPos.y===1) nC.y = currColors[2]; if(currPos.y===-1) nC.y = currColors[3];
         if(currPos.z===1) nC.z = currColors[4]; if(currPos.z===-1) nC.z = currColors[5];
@@ -575,8 +535,9 @@ function scoreSolution(path) {
     return { backMoves };
 }
 
-function generateScramble(path, prefix) {
-    if (!path || path.length === 0) return "無需打亂";
+// 輔助：生成顯示用的反向打亂字串 (這並不是給動畫用的，純顯示)
+function generateInvertedString(path) {
+    if (!path || path.length === 0) return "";
     let reversed = [...path].reverse().map(move => {
         let char = move[0];
         let modifier = move.length > 1 ? move[1] : '';
@@ -585,7 +546,7 @@ function generateScramble(path, prefix) {
         if (modifier === '2') return char + '2'; 
         return move;
     });
-    return (prefix ? prefix + " " : "") + reversed.join(" ");
+    return reversed.join(" ");
 }
 
 function invertMove(move) {
@@ -811,31 +772,62 @@ function solve() {
                 let bestPath = finalPaths[0];
                 
                 let resultDisplay = bestPath.length === 0 ? "無需移動" : bestPath.join(" ");
-                let resultAlg = bestPath.length === 0 ? "" : bestPath.join(" ");
+                // let resultAlg = bestPath.length === 0 ? "" : bestPath.join(" ");
                 
                 let prefixStr = rotSeq.join(" ");
                 
                 text.innerText = (prefixStr ? `(${prefixStr}) ` : "") + resultDisplay;
                 text.style.color = "var(--accent-color)";
 
-                if(scrambleText.innerText === "") {
-                    let scramble = generateScramble(bestPath, prefixStr);
-                    scrambleText.innerText = "打亂: " + scramble;
+                // --- 修正文字顯示邏輯 (包含三種反向) ---
+                let scrambleHtml = "";
+                
+                // 1. 如果有 WCA 打亂，顯示它以及它的反向
+                if (currentScramble) {
+                    scrambleHtml += `<div><strong>Scramble:</strong> ${currentScramble}</div>`;
+                    
+                    let invScramble = generateInvertedString(currentScramble.split(" "));
+                    scrambleHtml += `<div style="margin-top:4px; color:#aaa;"><strong>Inv Scramble:</strong> ${invScramble}</div>`;
                 }
 
+                // 2. 顯示底十字解法的反向 (永遠顯示)
+                let invSol = generateInvertedString(bestPath);
+                if(invSol) {
+                    scrambleHtml += `<div style="margin-top:4px; color:#aaa;"><strong>Inv Solution:</strong> ${invSol}</div>`;
+                }
+                
+                scrambleText.innerHTML = scrambleHtml;
+
+
+                // --- 更新 Twisty Player (修正動畫顏色) ---
                 if(player) {
-                    let fullAlgForPlayer = (prefixStr ? prefixStr + " " : "") + resultAlg;
                     let inverseRot = invertAlg(rotSeq);
                     let inverseSol = invertAlg(bestPath);
-                    
-                    let setupParts = [];
-                    if (prefixStr) setupParts.push(prefixStr);
-                    if (inverseSol) setupParts.push(inverseSol);
-                    if (inverseRot) setupParts.push(inverseRot);
-                    
-                    let setupAlg = setupParts.join(" ");
+                    let setupAlg = "";
+                    let playAlg = "";
 
-                    player.alg = fullAlgForPlayer;
+                    // 我們希望「播放」的內容包含：[旋轉] + [解法]
+                    // 這樣使用者才會看到 x, y, z 的動畫
+                    let partsToPlay = [];
+                    if (prefixStr) partsToPlay.push(prefixStr);
+                    partsToPlay.push(bestPath.join(" "));
+                    playAlg = partsToPlay.join(" ").trim();
+
+                    // Setup 的目標是把魔方設定到「播放前」的狀態
+                    if (currentScramble) {
+                         // 隨機模式：初始狀態就是 WCA 打亂的樣子 (白上綠前)
+                         setupAlg = currentScramble;
+                    } else {
+                        // 手動模式：我們希望播放 [旋轉] + [解法] 變成 [已還原]
+                        // 所以初始狀態 Setup = [播放動作的反向] = [解法反向] + [旋轉反向]
+                        // 注意順序：先反向解法，再反向旋轉
+                        let partsToSetup = [];
+                        if (inverseSol) partsToSetup.push(inverseSol);
+                        if (inverseRot) partsToSetup.push(inverseRot);
+                        setupAlg = partsToSetup.join(" ").trim();
+                    }
+
+                    player.alg = playAlg;
                     player.experimentalSetupAlg = setupAlg;
                     
                     player.timestamp = 0;
@@ -853,14 +845,11 @@ function solve() {
     }, 50);
 }
 
-// 關鍵修復：手動將模組內的函數綁定到 window 物件
-// 這樣 HTML 中的 onclick="..." 才能找到這些函數
 window.resetColors = resetColors;
 window.updateFacingOptions = updateFacingOptions;
 window.handleModeChange = handleModeChange;
 window.generateAndApplyScramble = generateAndApplyScramble;
 window.solve = solve;
 
-// 最後才執行 init，確保所有函數定義都已經準備好
 init();
 animate();
