@@ -50,8 +50,7 @@ let targetRotY = 0;
 /* =========================================================
    2. 初始化與 3D 建置
    ========================================================= */
-init();
-animate();
+// 注意：init() 與 animate() 已移至檔案最末端執行，確保所有函數已定義
 
 function init() {
     const container = document.getElementById('canvas-wrapper');
@@ -80,7 +79,7 @@ function init() {
     targetRotX = 0.2;
     targetRotY = -0.3;
 
-    // 初始化下拉選單
+    // 初始化下拉選單 (現在這裡呼叫是安全的，因為函數定義已被提升)
     updateFacingOptions();
 }
 
@@ -101,10 +100,6 @@ function createCube() {
                     getMat(FACE_COLORS.F), // 4: Front
                     getMat(FACE_COLORS.B)  // 5: Back
                 ];
-                
-                // 根據位置將不需要顯示的面設為 Core 黑色，但這裡為了支援打亂，我們全部初始化
-                // 然後根據 x,y,z 將內部面設黑比較好？
-                // 原代碼邏輯是：如果是邊界面才給顏色。
                 
                 const finalMats = mats.map((m, i) => {
                     if (i === 0 && x !== 1) return coreMat;
@@ -210,8 +205,8 @@ function onPointerDown(event) {
     }
 }
 
-// 綁定到 window 以供 HTML 調用
-window.resetColors = function() {
+// 修改定義方式：先定義標準函數，確保內部可以互相呼叫
+function resetColors() {
     scene.remove(cubeGroup);
     createCube();
     targetRotX = 0.2;
@@ -232,7 +227,7 @@ window.resetColors = function() {
     }
 }
 
-window.updateFacingOptions = function() {
+function updateFacingOptions() {
     const crossVal = document.getElementById('cross-color').value;
     const facingSelect = document.getElementById('facing-color');
     const currentFacing = facingSelect.value;
@@ -252,10 +247,10 @@ window.updateFacingOptions = function() {
     } else {
         facingSelect.value = validOptions[0];
     }
-    window.handleModeChange();
+    handleModeChange(); // 內部呼叫現在是安全的
 }
 
-window.handleModeChange = function() {
+function handleModeChange() {
     const text = document.getElementById('solution-text');
     text.innerText = "設定已變更，請按計算";
     text.style.color = "#FFD60A";
@@ -267,7 +262,7 @@ window.handleModeChange = function() {
    ========================================================= */
 
 // 1. 生成打亂
-window.generateAndApplyScramble = async function() {
+async function generateAndApplyScramble() {
     try {
         const text = document.getElementById('solution-text');
         text.innerText = "打亂中...";
@@ -319,26 +314,15 @@ function applyScrambleToThreeJS(scrambleStr) {
 }
 
 // 核心：在 Three.js 物件上執行邏輯層轉
-// 這會同時更新 mesh.position, mesh.userData, 和 mesh.material 排列
 function performLayerRotation(faceChar) {
     const axisInfo = {
         'U': { axis: 'y', val: 1,  rot: 'cw' },
-        'D': { axis: 'y', val: -1, rot: 'ccw' }, // D 順時針是從底部看，相當於 Y 軸逆時針
-        'R': { axis: 'x', val: 1,  rot: 'cw' }, // 從右看順時針 = X 軸逆時針 (Three.js 座標系規則: X向右) Wait.
-                                                // ThreeJS Right Hand Rule: Thumb=Axis. 
-                                                // X axis points Right. Rotation around +X is Counter-Clockwise looking from Right?
-                                                // Let's stick to standard logic map below.
+        'D': { axis: 'y', val: -1, rot: 'ccw' },
+        'R': { axis: 'x', val: 1,  rot: 'cw' },
         'L': { axis: 'x', val: -1, rot: 'ccw' },
-        'F': { axis: 'z', val: 1,  rot: 'cw' }, // Z points out. CCW looking from front.
+        'F': { axis: 'z', val: 1,  rot: 'cw' },
         'B': { axis: 'z', val: -1, rot: 'ccw' }
     };
-
-    // 重新定義簡單的旋轉矩陣邏輯 (針對座標)
-    // 假設我們從軸的正方向看去，順時針旋轉90度: (u, v) -> (v, -u)
-    // Three.js 座標系: X右, Y上, Z前
-    
-    // 定義各個面的旋轉對座標和材質的影響
-    // 索引: R:0, L:1, U:2, D:3, F:4, B:5
     
     let meshes = [];
     cubeGroup.children.forEach(m => meshes.push(m));
@@ -362,106 +346,44 @@ function performLayerRotation(faceChar) {
         let newX = x, newY = y, newZ = z;
         let newMat = [...mat]; // Copy current assignment
 
-        // 旋轉邏輯：更新座標 (x,y,z) 和 材質排列 (Swap Faces)
-        // 這裡實作標準魔方旋轉定義 (90度順時針)
-        
+        // 旋轉邏輯
         if (faceChar === 'U') {
-            // U (Y-Axis CW): x -> -z, z -> x
-            // 但這是在常用數學座標系。在 ThreeJS 若 Y 向上，繞 Y 軸旋轉：
-            // x' = z, z' = -x (這是 90度 逆時針 viewing from top? No)
-            // 讓我們用物理直覺：U面順時針。
-            // 點 (1,1,1) [URF] 轉到 (1,1,-1) [URB] ? 不，那是 -90度。
-            // (1,1,1) [URF] 轉到 (-1,1,1) [UFL] ? 對。
-            // 原本 X=1 變成 Z=1 ? 不。
-            // 原本 (1, 1, 1) -> (-1, 1, 1). 
-            // 變換: x' = -z, z' = x (Wait: -1 != -1. z=1, -z=-1. x=1. -z is -1. x'=-1. Correct)
-            // 所以 U: x' = -z, z' = x.
-            
             newX = -z; newZ = x;
-            
-            // 材質交換: F(4)->L(1)->B(5)->R(0)->F(4)
             newMat[1] = mat[4]; // L takes F
             newMat[5] = mat[1]; // B takes L
             newMat[0] = mat[5]; // R takes B
             newMat[4] = mat[0]; // F takes R
         }
         else if (faceChar === 'D') {
-            // D (Down face CW looking from bottom) -> 相當於 U 的反向
-            // x' = z, z' = -x
             newX = z; newZ = -x;
-            
-            // 材質交換: F(4)->R(0)->B(5)->L(1)->F(4)
             newMat[0] = mat[4]; // R takes F
             newMat[5] = mat[0]; // B takes R
             newMat[1] = mat[5]; // L takes B
             newMat[4] = mat[1]; // F takes L
         }
         else if (faceChar === 'R') {
-            // R (Right face CW)
-            // 繞 X 軸。y -> z, z -> -y? 
-            // 測試: (1,1,1) [URF] -> (1, -1, 1) [DRF]? 不，R轉會把前面轉上去。
-            // (1,1,1) [URF] -> (1, 1, -1) [URB].
-            // y=1 -> y=1 (不變?) 錯了。
-            // R轉： URF -> BRU (1,1,-1).
-            // y' = z, z' = -y. (1->1, 1->-1). Correct.
-            // 變換: y' = z, z' = -y
-            
-            // 但這好像是逆時針？R是把前面往上抬嗎？
-            // R 是 "Right face clockwise". 拿起方塊看右面，順時針。
-            // 前面(F) -> 上面(U) -> 後面(B) -> 下面(D) -> 前面(F)
-            // 所以 (1,1,1)[URF] 應該跑到 (1,1,-1)[URB].
-            // 變換: y' = -z, z' = y (Wait: -1 != 1)
-            
-            // 讓我們再想一次。
-            // F(z=1, y=0) -> U(z=0, y=1). 
-            // 變換: y' = z, z' = -y.
-            // Check (1,0,1) -> (1,1,0). Correct.
-            
             newY = z; newZ = -y;
-            
-            // 材質交換: F(4)->U(2)->B(5)->D(3)->F(4)
             newMat[2] = mat[4]; // U takes F
             newMat[5] = mat[2]; // B takes U
             newMat[3] = mat[5]; // D takes B
             newMat[4] = mat[3]; // F takes D
         }
         else if (faceChar === 'L') {
-            // L (Left face CW)
-            // 對稱於 R，方向相反。
-            // F -> D -> B -> U -> F
-            // y' = -z, z' = y
             newY = -z; newZ = y;
-            
-            // 材質交換: F(4)->D(3)->B(5)->U(2)->F(4)
             newMat[3] = mat[4]; // D takes F
             newMat[5] = mat[3]; // B takes D
             newMat[2] = mat[5]; // U takes B
             newMat[4] = mat[2]; // F takes U
         }
         else if (faceChar === 'F') {
-            // F (Front face CW)
-            // 繞 Z 軸。
-            // U -> R -> D -> L -> U
-            // (1,1,1) [URF] -> (1,-1,1) [DRF].
-            // x' = y, y' = -x.
-            // Check (0,1,1) [UF] -> (1,0,1) [RF].
-            // x'=1, y'=0. Correct.
             newX = y; newY = -x;
-            
-            // 材質交換: U(2)->R(0)->D(3)->L(1)->U(2)
             newMat[0] = mat[2]; // R takes U
             newMat[3] = mat[0]; // D takes R
             newMat[1] = mat[3]; // L takes D
             newMat[2] = mat[1]; // U takes L
         }
         else if (faceChar === 'B') {
-            // B (Back face CW)
-            // 反向 F
-            // U -> L -> D -> R -> U
-            // x' = -y, y' = x
             newX = -y; newY = x;
-            
-            // 材質交換: U(2)->L(1)->D(3)->R(0)->U(2)
             newMat[1] = mat[2]; // L takes U
             newMat[3] = mat[1]; // D takes L
             newMat[0] = mat[3]; // R takes D
@@ -596,7 +518,6 @@ function readAndTransformState(targetColorId, rotSeq) {
     return solverEdges;
 }
 
-// 基礎移動邏輯 (僅用於生成查找表)
 const BASE_MOVES_LOGIC = {
     'F': [ {s:8,e:4,f:1}, {s:4,e:0,f:1}, {s:0,e:7,f:1}, {s:7,e:8,f:1} ],
     'B': [ {s:10,e:6,f:1}, {s:6,e:2,f:1}, {s:2,e:5,f:1}, {s:5,e:10,f:1} ],
@@ -611,7 +532,6 @@ let SOLVER_CACHE = null;
 function initSolver() {
     if (SOLVER_CACHE) return;
     
-    // 定義移動優先級與順序 (Back moves 在最後)
     const prioritizedMoves = [
         {f:'R',v:''}, {f:'L',v:''}, {f:'U',v:''}, {f:'D',v:''}, {f:'F',v:''},
         {f:'R',v:"'"}, {f:'L',v:"'"}, {f:'U',v:"'"}, {f:'D',v:"'"}, {f:'F',v:"'"},
@@ -619,12 +539,10 @@ function initSolver() {
         {f:'B',v:''}, {f:'B',v:"'"}, {f:'B',v:'2'}
     ];
     
-    // R=0, L=1, U=2, D=3, F=4, B=5
     const faceMap = {'R':0, 'L':1, 'U':2, 'D':3, 'F':4, 'B':5};
     const moveFaces = prioritizedMoves.map(m => faceMap[m.f]);
     const moveNames = prioritizedMoves.map(m => m.f + m.v);
     
-    // 預計算轉表
     const table = new Int8Array(18 * 24);
     
     prioritizedMoves.forEach((pm, moveIdx) => {
@@ -670,7 +588,6 @@ function generateScramble(path, prefix) {
     return (prefix ? prefix + " " : "") + reversed.join(" ");
 }
 
-// 輔助函數：反轉單個移動或旋轉
 function invertMove(move) {
     if(!move) return "";
     let base = move[0];
@@ -678,27 +595,25 @@ function invertMove(move) {
     if (mod === "") return base + "'";
     if (mod === "'") return base;
     if (mod === "2") return base + "2";
-    return move; // Fallback
+    return move; 
 }
 
-// 輔助函數：反轉整個移動序列 (字串陣列 -> 字串)
 function invertAlg(algArray) {
     if(!algArray || algArray.length === 0) return "";
     return [...algArray].reverse().map(m => invertMove(m)).join(" ");
 }
 
-// 綁定 Solve 到 window
-window.solve = function() {
+// 修改定義方式：先定義標準函數
+function solve() {
     const text = document.getElementById('solution-text');
     const scrambleText = document.getElementById('scramble-text');
-    const player = document.getElementById('solution-player'); // 獲取動畫播放器
+    const player = document.getElementById('solution-player'); 
     
     const crossSelect = document.getElementById('cross-color').value;
     const facingSelect = document.getElementById('facing-color').value;
     
     let crossId = -1, facingId = -1;
 
-    // 解析 Cross Color
     if (crossSelect === 'W') crossId = C_W;
     else if (crossSelect === 'Y') crossId = C_Y;
     else if (crossSelect === 'R') crossId = C_R;
@@ -706,7 +621,6 @@ window.solve = function() {
     else if (crossSelect === 'G') crossId = C_G;
     else if (crossSelect === 'B') crossId = C_B;
 
-    // 解析 Facing Color
     if (facingSelect === 'G') facingId = C_G;
     else if (facingSelect === 'R') facingId = C_R;
     else if (facingSelect === 'B') facingId = C_B;
@@ -714,7 +628,6 @@ window.solve = function() {
     else if (facingSelect === 'W') facingId = C_W;
     else if (facingSelect === 'Y') facingId = C_Y;
 
-    // 簡單檢查: 顏色不能相同
     if (crossId === facingId) {
         text.innerText = "底色與正面不能相同";
         text.style.color = "var(--danger-color)";
@@ -723,8 +636,6 @@ window.solve = function() {
     }
 
     text.innerText = "計算中...";
-    // 保留 scrambleText 如果它是自動生成的，否則清空？
-    // 這裡我們選擇不清空，因為用戶可能想對照
     text.style.color = "#FFD60A";
 
     setTimeout(() => {
@@ -733,7 +644,7 @@ window.solve = function() {
             const { table, moveNames, moveFaces } = SOLVER_CACHE;
 
             let rotSeq = [];
-            let pattern = []; // [Front, Right, Back, Left]
+            let pattern = []; 
 
             if (crossId === C_W) {
                 rotSeq.push('z2');
@@ -789,9 +700,7 @@ window.solve = function() {
                 else throw new Error("無效朝向");
             }
             
-            // 讀取並轉換狀態
             const edges = readAndTransformState(crossId, rotSeq);
-            
             const crossName = (crossId===C_W?"白色":(crossId===C_Y?"黃色":(crossId===C_R?"紅色":(crossId===C_O?"橘色":(crossId===C_G?"綠色":"藍色")))));
             
             if(edges.length !== 4) { 
@@ -827,7 +736,6 @@ window.solve = function() {
             }
 
             const SOLVED_STATE = 200768;
-
             const visited = new Uint8Array(1048576); 
             const parentMap = new Uint32Array(1048576); 
             
@@ -902,39 +810,24 @@ window.solve = function() {
                 finalPaths.sort((a, b) => scoreSolution(a).backMoves - scoreSolution(b).backMoves);
                 let bestPath = finalPaths[0];
                 
-                // [修改點] 顯示文字與播放代碼分離
-                // 如果 bestPath 是空陣列，顯示 "無需移動"，但給播放器的 alg 是空字串
                 let resultDisplay = bestPath.length === 0 ? "無需移動" : bestPath.join(" ");
                 let resultAlg = bestPath.length === 0 ? "" : bestPath.join(" ");
                 
                 let prefixStr = rotSeq.join(" ");
                 
-                // 顯示結果
                 text.innerText = (prefixStr ? `(${prefixStr}) ` : "") + resultDisplay;
                 text.style.color = "var(--accent-color)";
 
-                // 如果是手動填色的，這裡會覆蓋掉自動打亂的字串
-                // 如果是自動打亂的，scrambleText 已經有值了，這裡我們顯示 "解法打亂" 可能有點混淆
-                // 所以我們只在 scrambleText 為空時才填入生成的反向打亂
                 if(scrambleText.innerText === "") {
                     let scramble = generateScramble(bestPath, prefixStr);
                     scrambleText.innerText = "打亂: " + scramble;
                 }
 
-                // --- 更新 Twisty Player ---
                 if(player) {
-                    // 1. 構建播放用的公式: [旋轉] + [解法]
-                    // 注意：這裡使用 resultAlg (空字串)，而不是 resultDisplay ("無需移動")
-                    // 這樣當無需移動時，fullAlgForPlayer 只會是 "z'" 之類的旋轉指令，動畫就能正確播放
                     let fullAlgForPlayer = (prefixStr ? prefixStr + " " : "") + resultAlg;
-                    
-                    // 2. 構建 Setup Alg (讓動畫回到標準視角開始)
-                    // 邏輯: 旋轉至解題視角 -> 反向打亂 -> 旋轉回標準視角
-                    // 這樣播放器開始時是標準視角(白上/綠前)，但內部貼紙已正確打亂
                     let inverseRot = invertAlg(rotSeq);
                     let inverseSol = invertAlg(bestPath);
                     
-                    // 確保字串拼接不會有多餘空格
                     let setupParts = [];
                     if (prefixStr) setupParts.push(prefixStr);
                     if (inverseSol) setupParts.push(inverseSol);
@@ -945,7 +838,6 @@ window.solve = function() {
                     player.alg = fullAlgForPlayer;
                     player.experimentalSetupAlg = setupAlg;
                     
-                    // 3. 不自動播放，重置到開頭
                     player.timestamp = 0;
                 }
 
@@ -960,3 +852,15 @@ window.solve = function() {
         }
     }, 50);
 }
+
+// 關鍵修復：手動將模組內的函數綁定到 window 物件
+// 這樣 HTML 中的 onclick="..." 才能找到這些函數
+window.resetColors = resetColors;
+window.updateFacingOptions = updateFacingOptions;
+window.handleModeChange = handleModeChange;
+window.generateAndApplyScramble = generateAndApplyScramble;
+window.solve = solve;
+
+// 最後才執行 init，確保所有函數定義都已經準備好
+init();
+animate();
