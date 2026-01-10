@@ -13,10 +13,28 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
-    
     <script src="https://cdn.cubing.net/v0/js/cubing/twisty" type="module"></script>
 </head>
 <body>
+
+<div id="camera-modal" class="camera-modal hidden">
+    <div class="camera-container">
+        <video id="camera-video" autoplay playsinline></video>
+        <canvas id="camera-canvas" style="display:none;"></canvas>
+        <div class="scan-overlay">
+            <div class="scan-grid">
+                <div></div><div></div><div></div>
+                <div></div><div></div><div></div>
+                <div></div><div></div><div></div>
+            </div>
+            <div class="scan-message">請將中心塊對準九宮格中央</div>
+        </div>
+        <div class="camera-controls">
+            <button class="btn btn-reset" onclick="window.closeCamera()">取消</button>
+            <button class="btn btn-calc" onclick="window.captureFace()">📸 掃描並填色</button>
+        </div>
+    </div>
+</div>
 
 <div class="app-grid">
     
@@ -45,7 +63,7 @@
                 <label>正面朝向 (Facing)</label>
                 <div class="select-wrapper">
                     <select id="facing-color" class="styled-select">
-                    </select>
+                        </select>
                 </div>
             </div>
         </div>
@@ -54,20 +72,20 @@
             <div class="hint-text">
                 <p>操作說明：</p>
                 <ul style="padding-left: 16px; margin: 5px 0;">
-                    <li>點擊「WCA 打亂」自動生成</li>
-                    <li>或手動在右側填色</li>
-                    <li>確認目標底色與朝向</li>
-                    <li>點擊「開始計算」</li>
+                    <li>先在右側選擇顏色或使用相機</li>
+                    <li>點擊 3D 方塊填色</li>
+                    <li>按下「開始計算」</li>
+                    <li>左側觀看動畫演示</li>
                 </ul>
             </div>
         </div>
 
         <div class="action-buttons">
-            <button class="btn btn-calc" id="btn-scramble" style="background: #9D00FF; color: #fff; box-shadow: 0 0 15px rgba(157, 0, 255, 0.3);">
-                <span class="icon">🎲</span> WCA 打亂
-            </button>
             <button class="btn btn-calc" id="btn-solve">
                 <span class="icon">⚡</span> 開始計算
+            </button>
+            <button class="btn btn-camera" id="btn-scan" style="background: #FFF; color: #000;">
+                <span class="icon">📷</span> 相機掃描
             </button>
             <button class="btn btn-reset" id="btn-reset">
                 <span class="icon">↺</span> 重置
@@ -88,8 +106,7 @@
             </div>
             <div class="solution-content">
                 <div id="solution-text">READY</div>
-                <div id="scramble-text" style="text-align: center; line-height: 1.5;">請設定顏色並按下計算</div>
-                <div id="inverse-text" style="font-family: var(--font-mono); font-size: 11px; color: #aaa; margin-top: 10px; white-space: pre-wrap; text-align: center;"></div>
+                <div id="scramble-text">請設定顏色並按下計算</div>
             </div>
         </section>
 
@@ -141,6 +158,6 @@
     </div>
 </div>
 
-<script type="module" src="script.js"></script>
+<script type="module" src="main.js"></script>
 </body>
 </html>

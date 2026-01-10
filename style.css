@@ -173,6 +173,8 @@ body {
 }
 .btn-reset:hover { background: #333; }
 
+.btn-camera:hover { filter: brightness(0.9); }
+
 .footer-note {
     font-size: 10px;
     color: #444;
@@ -416,6 +418,92 @@ twisty-player {
     z-index: 2;
 }
 
+/* --- Camera Modal Styles (新增) --- */
+.camera-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.camera-modal.hidden {
+    display: none;
+}
+
+.camera-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.scan-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 讓點擊事件穿透 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.scan-grid {
+    width: 300px;
+    height: 300px;
+    border: 2px solid var(--accent-color);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+}
+
+.scan-grid div {
+    border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+.scan-message {
+    margin-top: 20px;
+    background: rgba(0,0,0,0.7);
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: #fff;
+    font-family: var(--font-ui);
+    font-size: 14px;
+}
+
+.camera-controls {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 0 20px;
+}
+
+.camera-controls .btn {
+    flex: 1;
+    max-width: 200px;
+}
+
 
 /* --- 響應式設計 (手機/平板) --- */
 @media (max-width: 900px) {
@@ -454,6 +542,11 @@ twisty-player {
     .control-section { flex-direction: row; flex-wrap: wrap; gap: 12px; }
     .input-group { flex: 1; min-width: 140px; }
     
-    .action-buttons { flex-direction: row; }
-    .btn { flex: 1; height: 44px; }
+    .action-buttons { flex-direction: row; flex-wrap: wrap; }
+    .btn { flex: 1; height: 44px; min-width: 120px;}
+    
+    .scan-grid {
+        width: 80vw;
+        height: 80vw;
+    }
 }
