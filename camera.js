@@ -82,17 +82,61 @@ export class CameraScanner {
         return { r: r/count, g: g/count, b: b/count };
     }
 
+    // 依據提供的參數表進行 HSV 顏色分類
     classifyColor({r, g, b}) {
-        // RGB 歸一化
+        const [h, s, v] = this.rgbToHsv(r, g, b);
+
+        // 參數來源: 相機顏色參數.txt 
+        const colorRanges = {
+            'orange': { h: [5, 25], s: [20, 100], v: [30, 100] },
+            'red': { h: [350, 5], s: [40, 100], v: [20, 100] },
+            'yellow': { h: [50, 70], s: [50, 100], v: [70, 100] },
+            'green': { h: [100, 150], s: [50, 100], v: [30, 100] },
+            'blue': { h: [210, 270], s: [50, 100], v: [30, 100] },
+            'white': { h: [0, 360], s: [0, 10], v: [90, 100] }
+        };
+
+        // 映射字串到 HEX 數值
+        const colorHexMap = {
+            'orange': 0xFFA500,
+            'red': 0xFF0000,
+            'yellow': 0xFFFF00,
+            'green': 0x00FF00,
+            'blue': 0x0000FF,
+            'white': 0xFFFFFF
+        };
+
+        // 迭代判斷顏色 
+        for (const [color, range] of Object.entries(colorRanges)) {
+            let hInRange;
+            if (color === 'red') {
+                // 紅色跨越 360-0 度
+                hInRange = (h >= range.h[0] && h <= 360) || (h >= 0 && h <= range.h[1]);
+            } else {
+                hInRange = h >= range.h[0] && h <= range.h[1];
+            }
+
+            if (
+                hInRange &&
+                s >= range.s[0] && s <= range.s[1] &&
+                v >= range.v[0] && v <= range.v[1]
+            ) {
+                return colorHexMap[color];
+            }
+        }
+
+        return 0xFFFFFF; // 預設白色
+    }
+
+    // RGB 轉 HSV 算法 
+    rgbToHsv(r, g, b) {
         r /= 255; g /= 255; b /= 255;
         const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
+        const d = max - min;
+        let h, s = max === 0 ? 0 : d / max, v = max;
 
-        if (max === min) {
-            h = s = 0; 
-        } else {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === min) h = 0;
+        else {
             switch (max) {
                 case r: h = (g - b) / d + (g < b ? 6 : 0); break;
                 case g: h = (b - r) / d + 2; break;
@@ -100,27 +144,6 @@ export class CameraScanner {
             }
             h /= 6;
         }
-        
-        h = h * 360; // 0-360
-        s = s * 100; // 0-100
-        l = l * 100; // 0-100
-
-        // 提高白色的判定閾值
-        if (s < 20 || l > 80) return 0xFFFFFF; // White
-
-        // 暖色系
-        if (h >= 340 || h <= 45) {
-            if (h > 40 && l > 45) return 0xFFFF00; // Yellow
-            if (h > 10 && h <= 40) return 0xFFA500; // Orange
-            return 0xFF0000; // Red
-        }
-
-        // 綠色
-        if (h > 60 && h < 160) return 0x00FF00;
-
-        // 藍色
-        if (h >= 160 && h < 260) return 0x0000FF;
-
-        return 0xFFFFFF; // Fallback
+        return [h * 360, s * 100, v * 100];
     }
 }
