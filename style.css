@@ -10,7 +10,6 @@
     --accent-hover: #00B8CC;
     --solution-color: #FFD60A; /* 鮮黃色 */
     --danger-color: #FF2D55;
-    --scramble-color: #bd00ff; /* 紫色用於打亂按鈕 */
     
     --font-ui: 'Inter', sans-serif;
     --font-tech: 'Chakra Petch', sans-serif;
@@ -166,13 +165,6 @@ body {
     box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
 }
 .btn-calc:hover { background: var(--accent-hover); }
-
-.btn-scramble {
-    background: var(--scramble-color);
-    color: #fff;
-    box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
-}
-.btn-scramble:hover { filter: brightness(1.2); }
 
 .btn-reset {
     background: #222;
