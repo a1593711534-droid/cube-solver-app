@@ -26,19 +26,30 @@
             <div class="scan-header">
                 <h3 id="scan-step-title">準備掃描</h3>
                 <p id="scan-step-desc">請依照指示對準面</p>
+                <div id="scan-instruction" class="scan-instruction">⬆️ 白色中心塊朝上</div>
             </div>
-            <div class="scan-grid">
+            
+            <div class="scan-grid" id="preview-grid">
                 <div></div><div></div><div></div>
                 <div></div><div></div><div></div>
                 <div></div><div></div><div></div>
             </div>
+            
             <div class="scan-progress-dots" id="scan-dots">
                 <span></span><span></span><span></span><span></span><span></span><span></span>
             </div>
         </div>
+        
         <div class="camera-controls">
-            <button class="btn btn-reset" onclick="window.closeCamera()">取消</button>
-            <button class="btn btn-calc" id="btn-capture" onclick="window.captureFace()">📸 掃描並下一步</button>
+            <div id="cam-ctrl-scan" class="btn-group" style="display:flex;">
+                <button class="btn btn-reset" onclick="window.closeCamera()">退出</button>
+                <button class="btn btn-calc" onclick="window.freezeScan()">❄️ 鎖定顏色</button>
+            </div>
+            
+            <div id="cam-ctrl-confirm" class="btn-group" style="display:none;">
+                <button class="btn btn-reset" onclick="window.retryScan()">↺ 重掃</button>
+                <button class="btn btn-calc" onclick="window.confirmScan()">✅ 確認</button>
+            </div>
         </div>
     </div>
 </div>

@@ -12,18 +12,22 @@ let currentColorHex = 0xFFFFFF;
 
 // 掃描狀態管理
 let scanStep = 0;
-// 定義掃描順序: 上(U) -> 前(F) -> 右(R) -> 後(B) -> 左(L) -> 下(D)
-// 對應的 3D 旋轉角度 (使該面正對相機)
+let isScanFrozen = false; // 是否已鎖定預覽
+let frozenColors = []; // 暫存鎖定時的顏色
+
+// 定義掃描順序與方向指引
+// rot: 3D模型旋轉角度; instruction: 顯示在螢幕上的文字提示
 const SCAN_SEQUENCE = [
-    { face: 'U', name: '頂面 (白色中心)', rot: { x: Math.PI/2, y: 0 } },
-    { face: 'F', name: '前面 (綠色中心)', rot: { x: 0, y: 0 } },
-    { face: 'R', name: '右面 (紅色中心)', rot: { x: 0, y: -Math.PI/2 } },
-    { face: 'B', name: '後面 (藍色中心)', rot: { x: 0, y: Math.PI } },
-    { face: 'L', name: '左面 (橘色中心)', rot: { x: 0, y: Math.PI/2 } },
-    { face: 'D', name: '底面 (黃色中心)', rot: { x: -Math.PI/2, y: 0 } }
+    { face: 'U', name: '頂面 (白色中心)', rot: { x: Math.PI/2, y: 0 }, instruction: '⬇️ 綠色中心塊在 前 (下面)' },
+    { face: 'F', name: '前面 (綠色中心)', rot: { x: 0, y: 0 }, instruction: '⬆️ 白色中心塊在 上' },
+    { face: 'R', name: '右面 (紅色中心)', rot: { x: 0, y: -Math.PI/2 }, instruction: '⬆️ 白色中心塊在 上' },
+    { face: 'B', name: '後面 (藍色中心)', rot: { x: 0, y: Math.PI }, instruction: '⬆️ 白色中心塊在 上' },
+    { face: 'L', name: '左面 (橘色中心)', rot: { x: 0, y: Math.PI/2 }, instruction: '⬆️ 白色中心塊在 上' },
+    { face: 'D', name: '底面 (黃色中心)', rot: { x: -Math.PI/2, y: 0 }, instruction: '⬆️ 綠色中心塊在 前 (上面)' }
 ];
 
 const cameraScanner = new CameraScanner();
+let scanFrameId = null; // 用於 requestAnimationFrame
 
 init();
 animate();
@@ -66,13 +70,15 @@ function init() {
     targetRotX = 0.2;
     targetRotY = -0.3;
 
-    // 將相機功能暴露給全局
+    // 全局暴露相機控制函數
     window.closeCamera = () => {
+        stopScanLoop();
         cameraScanner.stop();
-        // 恢復預設視角
-        rotateViewTo(0.2, -0.3);
+        rotateViewTo(0.2, -0.3); // 恢復預設視角
     };
-    window.captureFace = processScanStep;
+    window.freezeScan = freezeScanPreview;
+    window.retryScan = unfreezeScanPreview;
+    window.confirmScan = confirmAndNextStep;
 }
 
 function createCube() {
@@ -155,7 +161,7 @@ function rotateView(dx, dy) {
     rotateViewTo(targetRotX, targetRotY);
 }
 
-// 絕對角度旋轉 (用於相機模式)
+// 絕對角度旋轉
 function rotateViewTo(x, y) {
     isAnimating = true;
     new TWEEN.Tween(cubeGroup.rotation).to({ x: x, y: y }, 500)
@@ -282,71 +288,134 @@ function runSolver() {
 }
 
 // ==========================================
-// 相機掃描邏輯 (Wizard Mode)
+// 相機掃描邏輯 (Real-time & Preview)
 // ==========================================
 
 function startScanningSession() {
     scanStep = 0;
+    isScanFrozen = false;
     updateScanUI();
-    cameraScanner.start();
-    // 立即旋轉到第一面 (U)
+    cameraScanner.start().then(() => {
+        startScanLoop();
+    });
+    // 立即旋轉到第一面
     const current = SCAN_SEQUENCE[scanStep];
     rotateViewTo(current.rot.x, current.rot.y);
 }
 
-function updateScanUI() {
-    const title = document.getElementById('scan-step-title');
-    const desc = document.getElementById('scan-step-desc');
-    const btn = document.getElementById('btn-capture');
-    const dots = document.querySelectorAll('#scan-dots span');
+// 啟動即時預覽循環
+function startScanLoop() {
+    if (scanFrameId) cancelAnimationFrame(scanFrameId);
     
+    const loop = () => {
+        if (!isScanFrozen) {
+            // 只有未鎖定時才更新
+            const colors = cameraScanner.getScanColors();
+            if (colors) {
+                updateGridPreview(colors);
+                frozenColors = colors; // 隨時緩存當前顏色，以便鎖定
+            } else {
+                // 若相機跑掉或無數據，清空預覽
+                updateGridPreview(null);
+            }
+        }
+        scanFrameId = requestAnimationFrame(loop);
+    };
+    scanFrameId = requestAnimationFrame(loop);
+}
+
+function stopScanLoop() {
+    if (scanFrameId) cancelAnimationFrame(scanFrameId);
+    scanFrameId = null;
+}
+
+// 更新 HTML 九宮格的背景顏色
+function updateGridPreview(colors) {
+    const cells = document.querySelectorAll('#preview-grid div');
+    
+    if (!colors) {
+        cells.forEach(cell => cell.style.backgroundColor = 'transparent');
+        return;
+    }
+
+    cells.forEach((cell, idx) => {
+        // 將 int color 轉為 css hex string
+        const hex = '#' + colors[idx].toString(16).padStart(6, '0');
+        // 加一點透明度讓它看起來像 AR 覆蓋
+        cell.style.backgroundColor = hex + 'CC'; // CC = 80% opacity
+    });
+}
+
+// UI 動作：鎖定預覽
+function freezeScanPreview() {
+    // 檢查是否有有效顏色
+    if (!frozenColors || frozenColors.length !== 9) {
+        alert("未檢測到顏色，請將魔術方塊對準中心");
+        return;
+    }
+    isScanFrozen = true;
+    
+    // 切換按鈕顯示
+    document.getElementById('cam-ctrl-scan').style.display = 'none';
+    document.getElementById('cam-ctrl-confirm').style.display = 'flex';
+}
+
+// UI 動作：重掃 (解除鎖定)
+function unfreezeScanPreview() {
+    isScanFrozen = false;
+    frozenColors = [];
+    document.getElementById('cam-ctrl-scan').style.display = 'flex';
+    document.getElementById('cam-ctrl-confirm').style.display = 'none';
+}
+
+// UI 動作：確認並下一步
+function confirmAndNextStep() {
+    if (!frozenColors) return;
+
+    // 1. 將鎖定的顏色應用到 3D 模型
+    applyColorsToFace(frozenColors);
+
+    // 2. 重置狀態進入下一步
+    isScanFrozen = false;
+    scanStep++;
+    
+    // 恢復按鈕狀態
+    document.getElementById('cam-ctrl-scan').style.display = 'flex';
+    document.getElementById('cam-ctrl-confirm').style.display = 'none';
+
     if (scanStep < 6) {
-        const info = SCAN_SEQUENCE[scanStep];
-        title.innerText = `掃描: ${info.name}`;
-        desc.innerText = "請將中心塊對準九宮格中央";
-        btn.innerText = "📸 掃描並下一步";
-        
-        // 更新進度點
-        dots.forEach((dot, idx) => {
-            if (idx === scanStep) dot.classList.add('active');
-            else dot.classList.remove('active');
-        });
+        const next = SCAN_SEQUENCE[scanStep];
+        rotateViewTo(next.rot.x, next.rot.y);
+        updateScanUI();
     } else {
-        // 完成
+        // 結束
+        stopScanLoop();
         window.closeCamera();
         handleModeChange();
         setTimeout(() => alert("掃描完成！請檢查顏色是否正確，然後按「開始計算」"), 300);
     }
 }
 
-function processScanStep() {
-    // 1. 獲取相機顏色
-    const colors = cameraScanner.capture();
-    if (!colors) return;
-
-    // 2. 將顏色應用到當前正對相機的那一面
-    // 由於我們在 startScanningSession 和 nextStep 時已經旋轉了 cubeGroup
-    // 所以直接用 Raycaster 打向螢幕中心即可命中正確的 Facelets
-    applyColorsToFace(colors);
-
-    // 3. 進入下一步
-    scanStep++;
+function updateScanUI() {
+    const title = document.getElementById('scan-step-title');
+    const desc = document.getElementById('scan-step-desc');
+    const instruction = document.getElementById('scan-instruction');
+    const dots = document.querySelectorAll('#scan-dots span');
+    
     if (scanStep < 6) {
-        // 旋轉到下一面
-        const next = SCAN_SEQUENCE[scanStep];
-        rotateViewTo(next.rot.x, next.rot.y);
-        updateScanUI();
-    } else {
-        // 結束
-        updateScanUI();
-        // 轉回預設視角方便檢查
-        rotateViewTo(0.2, -0.3);
+        const info = SCAN_SEQUENCE[scanStep];
+        title.innerText = `掃描: ${info.name}`;
+        desc.innerText = "對準後按「鎖定顏色」";
+        instruction.innerText = info.instruction; // 更新方向提示
+        
+        dots.forEach((dot, idx) => {
+            if (idx === scanStep) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
     }
 }
 
 function applyColorsToFace(colors) {
-    // 定義九宮格的螢幕空間座標 (NDC)
-    // 這些座標對應螢幕上的九個點
     const range = 0.5; 
     const points = [
         {x: -range, y: range}, {x: 0, y: range}, {x: range, y: range},
@@ -359,7 +428,6 @@ function applyColorsToFace(colors) {
         const intersects = raycaster.intersectObjects(cubeGroup.children);
         
         if (intersects.length > 0) {
-            // 找到第一個非黑色的面 (即貼紙面)
             const hit = intersects.find(h => {
                 const mIdx = h.face.materialIndex;
                 return h.object.material[mIdx].color.getHex() !== 0x000000;

@@ -453,7 +453,7 @@ twisty-player {
 /* 新增：相機標題區域 */
 .scan-header {
     position: absolute;
-    top: 40px;
+    top: 30px;
     text-align: center;
     background: rgba(0,0,0,0.6);
     padding: 10px 20px;
@@ -471,6 +471,17 @@ twisty-player {
     font-size: 14px;
     color: #eee;
 }
+/* 新增：方向指引樣式 */
+.scan-instruction {
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #FFD60A;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 4px;
+    display: inline-block;
+}
 
 .scan-grid {
     width: 300px;
@@ -484,6 +495,9 @@ twisty-player {
 
 .scan-grid div {
     border: 1px solid rgba(0, 229, 255, 0.3);
+    /* 讓預覽顏色稍微透明，看起來像 AR */
+    background-color: rgba(0,0,0,0); 
+    transition: background-color 0.1s;
 }
 
 /* 新增：掃描進度點 */
@@ -511,8 +525,15 @@ twisty-player {
     width: 100%;
     display: flex;
     justify-content: center;
-    gap: 20px;
     padding: 0 20px;
+}
+
+/* 新增：按鈕群組容器 */
+.btn-group {
+    width: 100%;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
 }
 
 .camera-controls .btn {
