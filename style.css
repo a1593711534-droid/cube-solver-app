@@ -1,0 +1,467 @@
+:root {
+    --bg-app: #050505;
+    --panel-bg: #111111;
+    --panel-border: #333333;
+    
+    --text-primary: #ffffff;
+    --text-muted: #888888;
+    
+    --accent-color: #00E5FF; /* 科技藍 */
+    --accent-hover: #00B8CC;
+    --solution-color: #FFD60A; /* 鮮黃色 */
+    --danger-color: #FF2D55;
+    --scramble-color: #bd00ff; /* 紫色用於打亂按鈕 */
+    
+    --font-ui: 'Inter', sans-serif;
+    --font-tech: 'Chakra Petch', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    --radius: 12px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+/* --- 全局網格佈局 --- */
+.app-grid {
+    display: grid;
+    /* 左側 320px，右側自適應 */
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: 100%;
+    height: 100%;
+    width: 100%;
+}
+
+/* --- 區域 1: 左側控制面板 --- */
+.panel-controls {
+    background-color: var(--panel-bg);
+    border-right: 1px solid var(--panel-border);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.panel-header h2 {
+    font-family: var(--font-tech);
+    font-size: 24px;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.control-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.input-group label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+/* 下拉選單樣式修復 */
+.select-wrapper {
+    position: relative;
+}
+
+.styled-select {
+    width: 100%;
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+    color: #fff; /* 輸入框文字白色 */
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: var(--font-mono);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.styled-select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+/* 修復選項文字顏色 */
+.styled-select option {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    padding: 10px;
+}
+
+.select-wrapper::after {
+    content: "▼";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 10px;
+    pointer-events: none;
+}
+
+/* 提示文字 */
+.hint-text {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* 按鈕 */
+.action-buttons {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn {
+    height: 50px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-tech);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-calc {
+    background: var(--accent-color);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+}
+.btn-calc:hover { background: var(--accent-hover); }
+
+.btn-scramble {
+    background: var(--scramble-color);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
+}
+.btn-scramble:hover { filter: brightness(1.2); }
+
+.btn-reset {
+    background: #222;
+    color: var(--danger-color);
+    border: 1px solid #333;
+}
+.btn-reset:hover { background: #333; }
+
+.footer-note {
+    font-size: 10px;
+    color: #444;
+    text-align: center;
+    margin-top: 10px;
+    font-family: var(--font-mono);
+}
+
+/* --- 右側主區域 --- */
+.main-column {
+    display: grid;
+    /* 上下分割：上方固定高度(或比例)，下方自適應 */
+    grid-template-rows: 25% 75%; /* 調整比例，留更多空間給下方 */
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* --- 區域 2: 公式顯示區 --- */
+.panel-solution {
+    background-color: #0d0d0d;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    position: relative;
+    background-image: radial-gradient(#222 1px, transparent 1px);
+    background-size: 20px 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.solution-header {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+}
+
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-color);
+}
+
+.solution-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+#solution-text {
+    font-family: var(--font-mono);
+    font-size: 3rem; 
+    font-weight: 700;
+    color: var(--solution-color);
+    text-align: center;
+    line-height: 1.1;
+    text-shadow: 0 0 20px rgba(255, 214, 10, 0.2);
+    max-width: 90%;
+    word-wrap: break-word;
+}
+
+#scramble-text {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    font-size: 13px;
+    background: #1a1a1a;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #333;
+}
+
+/* --- 區域 3: 工作區 (Split View: Player + Input) --- */
+.panel-3d {
+    background-color: #000;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viewport-header {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: #444;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+/* 分割容器 */
+.workspace-wrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    flex-grow: 1;
+    height: 100%;
+    min-height: 0; /* 重要：防止 flex overflow */
+}
+
+.workspace-split {
+    flex: 1;
+    background: #080808;
+    border: 1px solid #222;
+    border-radius: var(--radius);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.pane-label {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 10px;
+    color: #555;
+    font-family: var(--font-mono);
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* 左側：動畫播放器樣式調整 */
+.left-pane {
+    background: radial-gradient(circle at center, #151515 0%, #080808 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+twisty-player {
+    width: 100%;
+    height: 100%;
+    /* UI 優化：背景加深加亮，確保灰色按鈕可見 */
+    --twisty-player-control-panel-background: rgba(60, 60, 60, 0.95);
+    --twisty-player-foreground-color: #ffffff;
+    --twisty-player-button-fill: #ffffff;
+    --twisty-player-button-disabled-fill: #AAAAAA; /* 強制設定灰色填滿 */
+}
+
+/* 右側：輸入區 */
+.right-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+#canvas-wrapper {
+    flex-grow: 1;
+    width: 100%;
+    position: relative;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #000 70%);
+    overflow: hidden;
+}
+
+/* 旋轉控制項 */
+.rotate-controls {
+    position: absolute;
+    top: 16px;
+    right: 16px; /* 移到右上角避免擋到色盤 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+}
+
+.rot-row { display: flex; gap: 4px; }
+.middle { margin: 0; }
+
+.rot-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(50, 50, 50, 0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px; 
+    color: #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+}
+
+.rot-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.rot-btn:active { background: var(--accent-color); color: #000; }
+.spacer { width: 32px; visibility: hidden; }
+
+/* 移至下方的色盤樣式 */
+.palette-container {
+    padding: 12px;
+    background: #111;
+    border-top: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0; /* 防止被壓縮 */
+}
+
+.palette-container label {
+    font-size: 11px;
+    color: #888;
+    font-family: var(--font-mono);
+}
+
+.palette-grid {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.color-dot {
+    flex: 1;
+    height: 36px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.1s;
+    min-width: 30px;
+}
+
+.color-dot:active { transform: scale(0.9); }
+.color-dot.selected {
+    border-color: #fff;
+    box-shadow: 0 0 10px var(--accent-color);
+    transform: scale(1.1);
+    z-index: 2;
+}
+
+
+/* --- 響應式設計 (手機/平板) --- */
+@media (max-width: 900px) {
+    .app-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto; 
+        height: 100dvh;
+        overflow-y: auto;
+    }
+
+    /* 調整順序: 公式 -> 3D(含動畫) -> 控制面板 */
+    .panel-controls { order: 3; border-right: none; border-top: 1px solid var(--panel-border); padding: 16px; max-height: none; }
+    .main-column { order: 1; display: contents; }
+    
+    .panel-solution { order: 1; padding: 16px; min-height: auto; }
+    
+    /* 手機版將分割視圖改為上下排列，或者透過 Tab 切換 (這裡採用上下堆疊) */
+    .panel-3d { 
+        order: 2; 
+        height: auto; 
+        min-height: 500px; /* 給予足夠高度放兩個方塊 */
+        padding: 10px;
+    }
+
+    .workspace-wrapper {
+        flex-direction: column;
+    }
+
+    .workspace-split {
+        min-height: 250px;
+    }
+
+    /* 手機版字體調整 */
+    #solution-text { font-size: 2.2rem; }
+    
+    .control-section { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+    .input-group { flex: 1; min-width: 140px; }
+    
+    .action-buttons { flex-direction: row; }
+    .btn { flex: 1; height: 44px; }
+}

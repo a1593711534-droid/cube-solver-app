@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>魔方底十字求解器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    
+    <script src="https://cdn.cubing.net/v0/js/cubing/twisty" type="module"></script>
+</head>
+<body>
+
+<div class="app-grid">
+    
+    <aside class="panel-controls">
+        <div class="panel-header">
+            <h2>設定與工具</h2>
+            <div class="subtitle">Configuration</div>
+        </div>
+
+        <div class="control-section">
+            <div class="input-group">
+                <label>底色目標 (Cross)</label>
+                <div class="select-wrapper">
+                    <select id="cross-color" class="styled-select" onchange="window.updateFacingOptions()">
+                        <option value="W" selected>⚪ 白色 (White)</option>
+                        <option value="Y">🟡 黃色 (Yellow)</option>
+                        <option value="R">🔴 紅色 (Red)</option>
+                        <option value="O">🟠 橘色 (Orange)</option>
+                        <option value="G">🟢 綠色 (Green)</option>
+                        <option value="B">🔵 藍色 (Blue)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>正面朝向 (Facing)</label>
+                <div class="select-wrapper">
+                    <select id="facing-color" class="styled-select" onchange="window.handleModeChange()">
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="hint-text">
+                <p>操作說明：</p>
+                <ul style="padding-left: 16px; margin: 5px 0;">
+                    <li>先在右側選擇顏色</li>
+                    <li>點擊 3D 方塊填色</li>
+                    <li>按下「開始計算」</li>
+                    <li>左側觀看動畫演示</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-scramble" onclick="window.generateAndApplyScramble()">
+                <span class="icon">🎲</span> 隨機打亂
+            </button>
+            <button class="btn btn-calc" onclick="window.solve()">
+                <span class="icon">⚡</span> 開始計算
+            </button>
+            <button class="btn btn-reset" onclick="window.resetColors()">
+                <span class="icon">↺</span> 重置
+            </button>
+        </div>
+        
+        <div class="footer-note">
+            視角固定：白頂 / 綠前
+        </div>
+    </aside>
+
+    <div class="main-column">
+        
+        <section class="panel-solution">
+            <div class="solution-header">
+                <span class="indicator-dot"></span>
+                CALCULATION RESULT
+            </div>
+            <div class="solution-content">
+                <div id="solution-text">READY</div>
+                <div id="scramble-text">請設定顏色並按下計算</div>
+            </div>
+        </section>
+
+        <section class="panel-3d">
+            <div class="viewport-header">WORKSPACE</div>
+            
+            <div class="workspace-wrapper">
+                <div class="workspace-split left-pane">
+                    <div class="pane-label">SOLUTION PREVIEW</div>
+                    <twisty-player 
+                        id="solution-player"
+                        visualization="3D" 
+                        control-panel="bottom-row"
+                        background="none"
+                        hint-facelets="none"
+                        experimental-setup-alg=""
+                        alg="">
+                    </twisty-player>
+                </div>
+
+                <div class="workspace-split right-pane">
+                    <div class="pane-label">INPUT STATE</div>
+                    
+                    <div id="canvas-wrapper">
+                        <div class="rotate-controls">
+                            <div class="rot-row">
+                                <div class="rot-btn" id="r-up">▲</div>
+                            </div>
+                            <div class="rot-row middle">
+                                <div class="rot-btn" id="r-left">◀</div>
+                                <div class="rot-btn spacer"></div>
+                                <div class="rot-btn" id="r-right">▶</div>
+                            </div>
+                            <div class="rot-row">
+                                <div class="rot-btn" id="r-down">▼</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="palette-container">
+                        <label>選色 (Palette)</label>
+                        <div class="palette-grid" id="palette"></div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
