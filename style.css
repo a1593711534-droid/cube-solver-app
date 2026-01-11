@@ -681,17 +681,23 @@ twisty-player {
         flex-shrink: 0; 
     }
 
-    /* [修正] 移除 break-all，改用標準斷行，解決 "R 2" 分行的問題 */
+    /* [修正] 修復手機版公式每個字母都換行的問題 */
     .detail-row .value {
         font-family: var(--font-mono);
-        white-space: normal; /* 允許自然換行 */
-        word-break: normal;  /* 禁止切斷單字 */
-        overflow-wrap: break-word; /* 僅在必要時(超長字串)才斷行 */
-        background: rgba(0,0,0,0.3);
-        padding: 2px 6px;
-        border-radius: 4px;
+        /* 1. 改為 min-width: 0，這比 width: 0 更安全，能讓 flex 正確計算寬度 */
+        min-width: 0; 
         flex: 1;
-        width: 0;
+        
+        /* 2. 關鍵修正：禁止在單字中間斷行 */
+        white-space: normal;       /* 允許正常換行 */
+        word-break: normal;        /* 這是重點！絕對禁止 break-all */
+        word-wrap: break-word;     /* 相容性寫法 */
+        overflow-wrap: break-word; /* 只有當單字太長(例如一長串亂碼)超出容器時才切斷 */
+        
+        background: rgba(0,0,0,0.3);
+        padding: 4px 8px; /* 稍微增加內距 */
+        border-radius: 4px;
+        line-height: 1.4; /* 增加行高提升閱讀性 */
     }
 
     /* 4. TAB 分頁 */
