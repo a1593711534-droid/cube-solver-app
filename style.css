@@ -578,35 +578,41 @@ twisty-player {
     }
 }
 
-/* [修正] 美化後的懸浮相機按鈕 */
+/* [修正] 美化後的懸浮相機按鈕 (科技毛玻璃風格) */
 .float-scan-btn {
     display: flex;
     position: absolute;
-    top: 20px;  /* 給予更多頂部空間 */
-    left: 20px; /* 給予更多左側空間 */
-    width: 56px; /* 加大尺寸 */
-    height: 56px;
-    border-radius: 50%;
-    /* 使用漸層綠色背景 */
-    background: linear-gradient(135deg, #43a047, #2e7d32);
-    /* 加入立體陰影與發光效果 */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 
-                0 0 0 2px rgba(255, 255, 255, 0.1);
-    border: none;
+    top: 20px;
+    left: 20px;
+    width: 52px;
+    height: 52px;
+    /* 改用圓角矩形 (Squircle) 比較有現代科技感 */
+    border-radius: 16px; 
+    
+    /* 毛玻璃背景效果 */
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    
+    /* 細緻邊框 */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    
     color: #fff;
-    font-size: 26px; /* 圖示放大 */
+    font-size: 24px;
     align-items: center;
     justify-content: center;
     z-index: 100;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    backdrop-filter: blur(4px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .float-scan-btn:hover { 
-    transform: scale(1.05); 
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 
-                0 0 0 2px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+    transform: translateY(-2px);
 }
 
 .float-scan-btn:active { 
@@ -616,7 +622,7 @@ twisty-player {
 /* 電腦版隱藏手機分頁按鈕 */
 .mobile-tabs { display: none; }
 
-/* --- 響應式設計 (手機/平板) 最終修復版 --- */
+/* --- 響應式設計 (手機/平板) 最終細節修飾版 --- */
 @media (max-width: 900px) {
     /* 1. 外層容器：鎖定視窗 */
     .app-grid {
@@ -642,7 +648,7 @@ twisty-player {
     /* 3. 公式區 */
     .panel-solution {
         flex-shrink: 0;
-        padding: 8px 12px;
+        padding: 10px 12px;
         border-bottom: 1px solid #333;
         z-index: 20;
         width: 100%;
@@ -655,49 +661,52 @@ twisty-player {
         font-size: 1.3rem;
         margin: 0;
         text-align: left;
-        padding-bottom: 4px;
+        padding-bottom: 6px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 4px;
     }
 
     .formula-details {
         display: flex !important;
         flex-direction: column;
         width: 100%;
-        gap: 4px;
+        gap: 6px; /* 行距 */
     }
 
+    /* [修正] 公式標題與內容改成「同一行」顯示 */
     .detail-row {
         display: flex;
-        align-items: flex-start;
-        gap: 6px;
+        flex-direction: row; /* 強制橫向排列 */
+        align-items: center; /* 垂直置中 */
+        gap: 8px;
         font-size: 11px;
         width: 100%;
     }
 
     .detail-row .label { 
-        min-width: 65px; 
+        min-width: auto; /* 不需要固定寬度，緊接著就好 */
         flex-shrink: 0; 
+        color: #888;
     }
 
-    /* [修正] 修復手機版公式每個字母都換行的問題 */
     .detail-row .value {
         font-family: var(--font-mono);
-        /* 1. 改為 min-width: 0，這比 width: 0 更安全，能讓 flex 正確計算寬度 */
         min-width: 0; 
         flex: 1;
         
-        /* 2. 關鍵修正：禁止在單字中間斷行 */
-        white-space: normal;       /* 允許正常換行 */
-        word-break: normal;        /* 這是重點！絕對禁止 break-all */
-        word-wrap: break-word;     /* 相容性寫法 */
-        overflow-wrap: break-word; /* 只有當單字太長(例如一長串亂碼)超出容器時才切斷 */
+        /* 禁止斷行設定，保持整齊 */
+        white-space: normal;
+        word-break: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
         
-        background: rgba(0,0,0,0.3);
-        padding: 4px 8px; /* 稍微增加內距 */
-        border-radius: 4px;
-        line-height: 1.4; /* 增加行高提升閱讀性 */
+        background: transparent; /* 移除背景讓它看起來像句子 */
+        padding: 0;
+        color: #ddd;
+        line-height: 1.4;
     }
 
     /* 4. TAB 分頁 */
@@ -785,27 +794,37 @@ twisty-player {
     .panel-controls {
         order: 2;
         flex-shrink: 0;
-        padding: 10px;
-        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        padding: 12px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
         background: var(--panel-bg);
         border-top: 1px solid var(--panel-border);
         border-right: none;
         width: 100%;
-        max-height: 40vh;
+        max-height: 45vh;
         overflow-y: auto;
     }
 
-    .panel-header, .hint-text, .subtitle, .footer-note, .input-group label { display: none; }
+    /* [修正] 移除 .input-group label 的隱藏，讓標題顯示出來 */
+    .panel-header, .hint-text, .subtitle, .footer-note { display: none; }
 
     .control-section {
         flex-direction: row;
-        gap: 8px;
-        padding-bottom: 8px;
+        gap: 12px;
+        padding-bottom: 12px;
         margin: 0;
         border: none;
     }
     
     .input-group { flex: 1; }
+
+    /* [新增] 手機版下拉選單的標籤樣式 */
+    .input-group label {
+        display: block;
+        font-size: 11px;
+        color: var(--accent-color); /* 用亮色標示 */
+        margin-bottom: 4px;
+        font-family: var(--font-tech);
+    }
     
     /* 按鈕三分天下 */
     .action-buttons {
