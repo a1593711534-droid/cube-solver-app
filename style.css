@@ -84,6 +84,7 @@ body {
     font-weight: 600;
 }
 
+/* 下拉選單樣式修復 */
 .select-wrapper {
     position: relative;
 }
@@ -92,7 +93,7 @@ body {
     width: 100%;
     background-color: #1a1a1a;
     border: 1px solid #444;
-    color: #fff;
+    color: #fff; /* 輸入框文字白色 */
     padding: 12px;
     border-radius: 8px;
     font-size: 14px;
@@ -108,6 +109,7 @@ body {
     outline: none;
 }
 
+/* 修復選項文字顏色 */
 .styled-select option {
     background-color: #1a1a1a;
     color: #ffffff;
@@ -125,12 +127,14 @@ body {
     pointer-events: none;
 }
 
+/* 提示文字 */
 .hint-text {
     font-size: 12px;
     color: #666;
     line-height: 1.5;
 }
 
+/* 按鈕 */
 .action-buttons {
     margin-top: auto;
     display: flex;
@@ -169,7 +173,12 @@ body {
 }
 .btn-reset:hover { background: #333; }
 
-.btn-camera:hover { filter: brightness(0.9); }
+.btn-scramble {
+    background: #7B1FA2;
+    color: #fff;
+    border: 1px solid #9C27B0;
+}
+.btn-scramble:hover { background: #9C27B0; }
 
 .footer-note {
     font-size: 10px;
@@ -179,13 +188,16 @@ body {
     font-family: var(--font-mono);
 }
 
+/* --- 右側主區域 --- */
 .main-column {
     display: grid;
-    grid-template-rows: 25% 75%;
+    /* 修正：改為 auto 1fr，讓上方 Solution 區塊可以根據內容長高，不會被推出去 */
+    grid-template-rows: auto 1fr;
     height: 100vh;
     overflow: hidden;
 }
 
+/* --- 區域 2: 公式顯示區 --- */
 .panel-solution {
     background-color: #0d0d0d;
     border-bottom: 1px solid var(--panel-border);
@@ -197,6 +209,7 @@ body {
     background-size: 20px 20px;
     justify-content: center;
     align-items: center;
+    min-height: 25%; /* 確保最小高度 */
 }
 
 .solution-header {
@@ -208,9 +221,9 @@ body {
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
-    position: absolute;
-    top: 20px;
-    left: 20px;
+    /* 修正：移除絕對定位，避免遮擋或跑版 */
+    align-self: flex-start;
+    margin-bottom: 20px;
 }
 
 .indicator-dot {
@@ -228,30 +241,59 @@ body {
     justify-content: center;
     align-items: center;
     gap: 12px;
+    flex-grow: 1;
 }
 
 #solution-text {
     font-family: var(--font-mono);
-    font-size: 3rem; 
+    /* 修正：字體改小，避免太長時溢出 */
+    font-size: 2rem; 
     font-weight: 700;
     color: var(--solution-color);
     text-align: center;
-    line-height: 1.1;
+    line-height: 1.2;
     text-shadow: 0 0 20px rgba(255, 214, 10, 0.2);
-    max-width: 90%;
+    max-width: 95%;
     word-wrap: break-word;
 }
 
-#scramble-text {
-    font-family: var(--font-mono);
-    color: var(--text-muted);
-    font-size: 13px;
-    background: #1a1a1a;
-    padding: 6px 12px;
-    border-radius: 4px;
-    border: 1px solid #333;
+.formula-details {
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 600px; /* 限制寬度閱讀較佳 */
 }
 
+.detail-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+}
+
+.detail-row .label {
+    color: var(--text-muted);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.detail-row .value {
+    color: #ccc;
+    word-break: break-all;
+    line-height: 1.4;
+    background: rgba(0,0,0,0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 100%;
+}
+
+/* --- 區域 3: 工作區 --- */
 .panel-3d {
     background-color: #000;
     position: relative;
@@ -333,7 +375,7 @@ twisty-player {
 .rotate-controls {
     position: absolute;
     top: 16px;
-    right: 16px; 
+    right: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -404,144 +446,8 @@ twisty-player {
     z-index: 2;
 }
 
-/* --- Camera Modal Styles (改進版) --- */
-.camera-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: #000;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
 
-.camera-modal.hidden {
-    display: none;
-}
-
-.camera-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-#camera-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.scan-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-/* 新增：相機標題區域 */
-.scan-header {
-    position: absolute;
-    top: 30px;
-    text-align: center;
-    background: rgba(0,0,0,0.6);
-    padding: 10px 20px;
-    border-radius: 8px;
-    width: 80%;
-}
-.scan-header h3 {
-    margin: 0;
-    font-family: var(--font-tech);
-    color: var(--accent-color);
-    font-size: 20px;
-}
-.scan-header p {
-    margin: 5px 0 0 0;
-    font-size: 14px;
-    color: #eee;
-}
-/* 新增：方向指引樣式 */
-.scan-instruction {
-    margin-top: 8px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #FFD60A;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 4px 10px;
-    border-radius: 4px;
-    display: inline-block;
-}
-
-.scan-grid {
-    width: 300px;
-    height: 300px;
-    border: 2px solid var(--accent-color);
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
-}
-
-.scan-grid div {
-    border: 1px solid rgba(0, 229, 255, 0.3);
-    /* 讓預覽顏色稍微透明，看起來像 AR */
-    background-color: rgba(0,0,0,0); 
-    transition: background-color 0.1s;
-}
-
-/* 新增：掃描進度點 */
-.scan-progress-dots {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-}
-.scan-progress-dots span {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #444;
-    transition: background 0.3s;
-}
-.scan-progress-dots span.active {
-    background: var(--accent-color);
-    box-shadow: 0 0 5px var(--accent-color);
-}
-
-.camera-controls {
-    position: absolute;
-    bottom: 30px;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    padding: 0 20px;
-}
-
-/* 新增：按鈕群組容器 */
-.btn-group {
-    width: 100%;
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-}
-
-.camera-controls .btn {
-    flex: 1;
-    max-width: 200px;
-    pointer-events: auto; /* 確保按鈕可點擊 */
-}
-
+/* --- 響應式設計 (手機/平板) --- */
 @media (max-width: 900px) {
     .app-grid {
         grid-template-columns: 1fr;
@@ -570,16 +476,12 @@ twisty-player {
         min-height: 250px;
     }
 
-    #solution-text { font-size: 2.2rem; }
+    /* 手機版字體調整 */
+    #solution-text { font-size: 1.8rem; }
     
     .control-section { flex-direction: row; flex-wrap: wrap; gap: 12px; }
     .input-group { flex: 1; min-width: 140px; }
     
-    .action-buttons { flex-direction: row; flex-wrap: wrap; }
-    .btn { flex: 1; height: 44px; min-width: 120px;}
-    
-    .scan-grid {
-        width: 80vw;
-        height: 80vw;
-    }
+    .action-buttons { flex-direction: row; }
+    .btn { flex: 1; height: 44px; }
 }
