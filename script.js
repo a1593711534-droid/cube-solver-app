@@ -1330,3 +1330,28 @@ function applyColorsTo3DFace(faceChar, hexArray) {
         }
     });
 }
+
+/* =========================================================
+   [新增] 手機版 TAB 切換邏輯
+   ========================================================= */
+function switchMobileTab(tabName) {
+    // 1. 移除所有 TAB 按鈕的 active 狀態
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // 2. 移除所有 Pane 的 active 狀態 (隱藏)
+    document.getElementById('tab-input').classList.remove('active');
+    document.getElementById('tab-preview').classList.remove('active');
+
+    // 3. 根據選擇激活對應項目
+    if (tabName === 'input') {
+        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('tab-input').classList.add('active');
+    } else {
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        document.getElementById('tab-preview').classList.add('active');
+        
+        // 觸發 resize 確保 twisty-player 正確渲染
+        window.dispatchEvent(new Event('resize'));
+    }
+}
+window.switchMobileTab = switchMobileTab;

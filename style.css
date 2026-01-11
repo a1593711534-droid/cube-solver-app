@@ -758,3 +758,209 @@ twisty-player {
         max-height: 350px;
     }
 }
+
+/* --- [新增] 手機版 TAB 與懸浮按鈕樣式 (全域) --- */
+.mobile-tabs { display: none; } /* 電腦版預設隱藏 */
+.float-scan-btn { display: none; } /* 電腦版預設隱藏 */
+
+/* --- 響應式設計 (手機/平板) TAB 優化版 --- */
+@media (max-width: 900px) {
+    .app-grid {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    /* 1. 上方：公式結果區 (恢復顯示詳細資訊，但字體縮小) */
+    .panel-solution { 
+        order: 1; 
+        padding: 8px 12px; 
+        flex-shrink: 0; /* 不要壓縮 */
+        border-bottom: 1px solid #333;
+        z-index: 20;
+        min-height: auto;
+        display: block; /* 解除 flex center */
+    }
+
+    .solution-header { display: none; } /* 隱藏標題省空間 */
+    
+    .solution-content {
+        align-items: flex-start; /* 靠左對齊 */
+        gap: 4px;
+    }
+
+    #solution-text { 
+        font-size: 1.2rem; /* 結果文字稍微縮小 */
+        margin: 0; 
+        text-align: left;
+        width: 100%;
+        padding-bottom: 4px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* 恢復顯示詳細公式，但極致壓縮行距 */
+    .formula-details { 
+        display: flex !important; 
+        width: 100%;
+        margin-top: 4px;
+        padding-top: 0;
+        border: none;
+        gap: 2px;
+    }
+    
+    .detail-row {
+        flex-direction: row; /* 左右排列 */
+        align-items: center;
+        gap: 6px;
+        font-size: 10px; /* 字體縮小 */
+    }
+    
+    .detail-row .label { min-width: 70px; } /* 標籤固定寬度 */
+    .detail-row .value { 
+        padding: 2px 4px; 
+        font-size: 10px;
+        white-space: nowrap;
+        overflow-x: auto; /* 過長可滑動 */
+        width: auto;
+        flex: 1;
+    }
+
+    /* 2. TAB 分頁按鈕 */
+    .mobile-tabs {
+        order: 2;
+        display: flex;
+        width: 100%;
+        background: #111;
+        border-bottom: 1px solid #333;
+    }
+
+    .tab-btn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #666;
+        padding: 10px 0;
+        font-family: var(--font-tech);
+        font-size: 14px;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+        color: var(--accent-color);
+        border-bottom-color: var(--accent-color);
+        background: rgba(0, 229, 255, 0.05);
+    }
+
+    /* 3. 中間：3D 工作區 (TAB 切換邏輯) */
+    .panel-3d { 
+        order: 3; 
+        flex: 1; 
+        padding: 0; 
+        display: flex;
+        flex-direction: column;
+        background: #000;
+        position: relative;
+    }
+
+    .viewport-header { display: none; } 
+
+    .workspace-wrapper {
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+    }
+
+    /* 預設隱藏所有 Split Pane */
+    .workspace-split {
+        display: none !important; 
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        border: none;
+    }
+
+    /* 只有加上 .active 的 Pane 才會顯示 (佔滿空間) */
+    .workspace-split.active {
+        display: flex !important;
+    }
+
+    /* [Input Tab] 內容樣式 */
+    .right-pane { position: relative; }
+    
+    #canvas-wrapper {
+        background: radial-gradient(circle at center, #1a1a1a 0%, #000 90%);
+    }
+
+    /* [新增] 左上角懸浮相機按鈕 */
+    .float-scan-btn {
+        display: flex;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(46, 125, 50, 0.8); /* 半透明綠 */
+        border: 1px solid #4CAF50;
+        color: #fff;
+        font-size: 20px;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .float-scan-btn:active { transform: scale(0.9); background: #4CAF50; }
+
+    /* 調整旋轉控制項位置，避免擋到相機 */
+    .rotate-controls { top: 10px; right: 10px; }
+
+    /* [Preview Tab] 內容樣式 */
+    .left-pane { background: #050505; }
+    twisty-player { transform: scale(1); } /* 恢復原大小 */
+    .pane-label { display: none; }
+
+    /* 4. 下方：控制面板 (按鈕區) */
+    .panel-controls { 
+        order: 4; 
+        border-top: 1px solid var(--panel-border); 
+        padding: 10px; 
+        background: var(--panel-bg);
+        flex-shrink: 0;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        gap: 8px;
+    }
+
+    .panel-header, .hint-text, .subtitle, .footer-note, .input-group label { display: none; }
+    
+    .control-section { 
+        flex-direction: row; 
+        gap: 8px; 
+        padding-bottom: 8px;
+        margin: 0;
+        border: none;
+    }
+    
+    .input-group { flex: 1; min-width: 0; }
+    
+    /* [關鍵] 底部按鈕：單行三分天下 */
+    .action-buttons { 
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr; /* 三等分 */
+        gap: 8px;
+        margin-top: 0;
+    }
+    
+    /* 按鈕樣式微調 */
+    .btn { 
+        height: 44px; 
+        font-size: 13px; /* 字體稍小以容納文字 */
+        padding: 0;
+        gap: 4px;
+        margin: 0;
+    }
+    
+    .btn .icon { font-size: 14px; }
+}

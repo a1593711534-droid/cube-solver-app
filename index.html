@@ -63,14 +63,11 @@
         </div>
 
         <div class="action-buttons">
-            <button class="btn btn-scan" onclick="startCameraScanFlow()">
-                <span class="icon">📷</span> 掃描魔方
-            </button>
             <button class="btn btn-scramble" onclick="window.generateRandomScramble()">
-                <span class="icon">🎲</span> WCA 隨機打亂
+                <span class="icon">🎲</span> 打亂
             </button>
             <button class="btn btn-calc" onclick="solve()">
-                <span class="icon">⚡</span> 開始計算
+                <span class="icon">⚡</span> 計算
             </button>
             <button class="btn btn-reset" onclick="resetColors()">
                 <span class="icon">↺</span> 重置
@@ -109,11 +106,16 @@
             </div>
         </section>
 
+        <div class="mobile-tabs">
+            <button class="tab-btn active" onclick="switchMobileTab('input')">填色模式 (Input)</button>
+            <button class="tab-btn" onclick="switchMobileTab('preview')">動畫預覽 (Preview)</button>
+        </div>
+
         <section class="panel-3d">
             <div class="viewport-header">WORKSPACE</div>
             
             <div class="workspace-wrapper">
-                <div class="workspace-split left-pane">
+                <div class="workspace-split left-pane" id="tab-preview">
                     <div class="pane-label">SOLUTION PREVIEW</div>
                     <twisty-player 
                         id="solution-player"
@@ -126,10 +128,14 @@
                     </twisty-player>
                 </div>
 
-                <div class="workspace-split right-pane">
+                <div class="workspace-split right-pane active" id="tab-input">
                     <div class="pane-label">INPUT STATE</div>
                     
                     <div id="canvas-wrapper">
+                        <button id="mobile-scan-btn" class="float-scan-btn" onclick="startCameraScanFlow()">
+                            📷
+                        </button>
+
                         <div class="rotate-controls">
                             <div class="rot-row">
                                 <div class="rot-btn" id="r-up">▲</div>
@@ -146,14 +152,12 @@
                     </div>
 
                     <div class="palette-container">
-                        <label>選色 (Palette)</label>
                         <div class="palette-grid" id="palette"></div>
                     </div>
                 </div>
             </div>
 
         </section>
-
     </div>
 </div>
 
