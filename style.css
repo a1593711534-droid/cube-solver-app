@@ -578,31 +578,35 @@ twisty-player {
     }
 }
 
-/* --- [修正] 懸浮相機按鈕 (PC/手機全域顯示) --- */
+/* [修正] 美化後的懸浮相機按鈕 */
 .float-scan-btn {
-    display: flex; /* 強制顯示 */
+    display: flex;
     position: absolute;
-    top: 15px;
-    left: 15px;
-    width: 44px;
-    height: 44px;
+    top: 20px;  /* 給予更多頂部空間 */
+    left: 20px; /* 給予更多左側空間 */
+    width: 56px; /* 加大尺寸 */
+    height: 56px;
     border-radius: 50%;
-    background: rgba(46, 125, 50, 0.9);
-    border: 1px solid #4CAF50;
+    /* 使用漸層綠色背景 */
+    background: linear-gradient(135deg, #43a047, #2e7d32);
+    /* 加入立體陰影與發光效果 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 
+                0 0 0 2px rgba(255, 255, 255, 0.1);
+    border: none;
     color: #fff;
-    font-size: 22px;
+    font-size: 26px; /* 圖示放大 */
     align-items: center;
     justify-content: center;
     z-index: 100;
     cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
     backdrop-filter: blur(4px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    transition: transform 0.2s, background 0.2s;
 }
 
 .float-scan-btn:hover { 
-    background: #4CAF50; 
-    transform: scale(1.1); 
+    transform: scale(1.05); 
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 
+                0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 .float-scan-btn:active { 
@@ -614,39 +618,38 @@ twisty-player {
 
 /* --- 響應式設計 (手機/平板) 最終修復版 --- */
 @media (max-width: 900px) {
-    /* 1. 外層容器：改為垂直排列 */
+    /* 1. 外層容器：鎖定視窗 */
     .app-grid {
         display: flex;
         flex-direction: column;
-        height: 100dvh; /* 鎖定視窗高度 */
-        width: 100vw;   /* 鎖定視窗寬度 */
+        height: 100dvh;
+        width: 100vw;
         max-width: 100vw;
         overflow: hidden;
     }
 
-    /* 2. 主操作區 (包含公式、TAB、3D) */
+    /* 2. 主操作區 */
     .main-column {
-        order: 1; /* 排在控制面板上方 */
-        flex: 1;  /* 自動佔據剩餘高度 (關鍵：這讓 3D 區有空間) */
+        order: 1;
+        flex: 1;
         display: flex;
         flex-direction: column;
-        height: auto; /* 覆蓋原本的 grid 高度 */
+        height: auto;
         overflow: hidden;
         min-height: 0;
     }
 
-    /* 3. 公式區：防止文字撐開畫面 */
+    /* 3. 公式區 */
     .panel-solution {
-        flex-shrink: 0; /* 固定高度 */
+        flex-shrink: 0;
         padding: 8px 12px;
         border-bottom: 1px solid #333;
         z-index: 20;
         width: 100%;
-        max-width: 100%;
         box-sizing: border-box;
     }
 
-    .solution-header { display: none; } /* 隱藏標題 */
+    .solution-header { display: none; }
 
     #solution-text {
         font-size: 1.3rem;
@@ -655,7 +658,7 @@ twisty-player {
         padding-bottom: 4px;
         white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis; /* 太長顯示... */
+        text-overflow: ellipsis;
     }
 
     .formula-details {
@@ -667,7 +670,7 @@ twisty-player {
 
     .detail-row {
         display: flex;
-        align-items: flex-start; /* 對齊頂部 */
+        align-items: flex-start;
         gap: 6px;
         font-size: 11px;
         width: 100%;
@@ -678,16 +681,17 @@ twisty-player {
         flex-shrink: 0; 
     }
 
-    /* [關鍵修正] 強制長文字換行，防止撐開螢幕 */
+    /* [修正] 移除 break-all，改用標準斷行，解決 "R 2" 分行的問題 */
     .detail-row .value {
         font-family: var(--font-mono);
-        white-space: normal; /* 允許換行 */
-        word-break: break-all; /* 強制斷行 */
+        white-space: normal; /* 允許自然換行 */
+        word-break: normal;  /* 禁止切斷單字 */
+        overflow-wrap: break-word; /* 僅在必要時(超長字串)才斷行 */
         background: rgba(0,0,0,0.3);
         padding: 2px 6px;
         border-radius: 4px;
-        flex: 1; /* 佔滿剩餘寬度 */
-        width: 0; /* 配合 flex 讓斷行生效 */
+        flex: 1;
+        width: 0;
     }
 
     /* 4. TAB 分頁 */
@@ -715,13 +719,13 @@ twisty-player {
         background: rgba(0, 229, 255, 0.05);
     }
 
-    /* 5. 3D 工作區：填滿中間剩餘空間 */
+    /* 5. 3D 工作區 */
     .panel-3d {
-        flex: 1; /* 這是讓填色方塊出現的關鍵 */
+        flex: 1;
         padding: 0;
         display: flex;
         flex-direction: column;
-        min-height: 0; /* 防止內容過多時無法壓縮 */
+        min-height: 0;
         background: #000;
         overflow: hidden;
     }
@@ -748,17 +752,17 @@ twisty-player {
         display: flex !important;
     }
 
-    /* 調整填色區樣式 */
+    /* 填色區 */
     .right-pane { position: relative; }
     
     #canvas-wrapper {
-        flex: 1; /* 填滿高度 */
+        flex: 1;
         width: 100%;
         background: radial-gradient(circle at center, #1a1a1a 0%, #000 90%);
         overflow: hidden;
     }
 
-    /* 調整調色盤位置 */
+    /* 調色盤 */
     .palette-container {
         padding: 8px;
         background: rgba(17,17,17,0.95);
@@ -767,14 +771,13 @@ twisty-player {
     .palette-container label { display: none; }
     .color-dot { height: 36px; }
 
-    /* 預覽區樣式 */
+    /* 預覽區 */
     .left-pane { background: #050505; }
     twisty-player { transform: scale(1); }
-    .pane-label { display: none; }
 
     /* 6. 底部控制面板 */
     .panel-controls {
-        order: 2; /* 排在 Main Column 下方 */
+        order: 2;
         flex-shrink: 0;
         padding: 10px;
         padding-bottom: calc(10px + env(safe-area-inset-bottom));
@@ -813,16 +816,12 @@ twisty-player {
         padding: 0;
     }
     
-    /* 確保相機按鈕在手機上樣式正確 */
-    .float-scan-btn {
-        display: flex;
-        top: 10px;
-        left: 10px;
-    }
-    
     .rotate-controls {
         top: 10px;
         right: 10px;
         transform: scale(0.9);
     }
 }
+
+/* [修正] 隱藏所有視窗標籤，解決與相機按鈕重疊的問題，並讓畫面更乾淨 */
+.pane-label { display: none !important; }

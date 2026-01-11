@@ -1332,7 +1332,7 @@ function applyColorsTo3DFace(faceChar, hexArray) {
 }
 
 /* =========================================================
-   [新增] 手機版 TAB 切換邏輯
+   [新增] 手機版 TAB 切換邏輯 (修復版)
    ========================================================= */
 function switchMobileTab(tabName) {
     // 1. 移除所有 TAB 按鈕的 active 狀態
@@ -1342,16 +1342,24 @@ function switchMobileTab(tabName) {
     document.getElementById('tab-input').classList.remove('active');
     document.getElementById('tab-preview').classList.remove('active');
 
-    // 3. 根據選擇激活對應項目
+    // 3. 根據選擇激活對應項目，並強制觸發重繪
     if (tabName === 'input') {
         document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('tab-input').classList.add('active');
+        
+        // [修正] 切換回填色模式時，也必須觸發 resize，否則 Three.js 畫布會因為曾被隱藏而大小異常
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 50);
+        
     } else {
         document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
         document.getElementById('tab-preview').classList.add('active');
         
         // 觸發 resize 確保 twisty-player 正確渲染
-        window.dispatchEvent(new Event('resize'));
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 50);
     }
 }
 window.switchMobileTab = switchMobileTab;
