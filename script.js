@@ -842,14 +842,27 @@ let stream = null;
 let currentFaceIndex = 0;
 // 定義掃描順序 (WCA標準展開: 上 -> 右 -> 前 -> 下 -> 左 -> 後)
 // 注意：這裡使用 app 內部的顏色代碼定義
-const SCAN_ORDER = ['U', 'R', 'F', 'D', 'L', 'B'];
+// 定義掃描順序：改成 U(白) -> F(綠) -> R(紅) -> B(藍) -> L(橘) -> D(黃)
+const SCAN_ORDER = ['U', 'F', 'R', 'B', 'L', 'D'];
+
 const FACE_LABELS = {
-    'U': '掃描上方 (黃色中心)', 
-    'R': '掃描右側 (橘色中心)', // 注意：這裡的提示僅供參考，實際以使用者手持為主
-    'F': '掃描正面 (綠色中心)', 
-    'D': '掃描下方 (白色中心)', 
-    'L': '掃描左側 (紅色中心)', 
-    'B': '掃描後面 (藍色中心)'
+    'U': '掃描上方 (白中心)',
+    'F': '掃描正面 (綠中心)',
+    'R': '掃描右側 (紅中心)',
+    'B': '掃描背面 (藍中心)',
+    'L': '掃描左側 (橘中心)',
+    'D': '掃描下方 (黃中心)'
+};
+
+// [新增] 每個面掃描時的九宮格周邊提示 (上、右、下、左)
+// 邏輯：告訴使用者「你的九宮格上方應該是哪一面」
+const ADJACENT_HINTS = {
+    'U': { top: 'B (藍)', right: 'R (紅)', bottom: 'F (綠)', left: 'L (橘)' },
+    'F': { top: 'U (白)', right: 'R (紅)', bottom: 'D (黃)', left: 'L (橘)' },
+    'R': { top: 'U (白)', right: 'B (藍)', bottom: 'D (黃)', left: 'F (綠)' },
+    'B': { top: 'U (白)', right: 'L (橘)', bottom: 'D (黃)', left: 'R (紅)' },
+    'L': { top: 'U (白)', right: 'F (綠)', bottom: 'D (黃)', left: 'B (藍)' },
+    'D': { top: 'F (綠)', right: 'R (紅)', bottom: 'B (藍)', left: 'L (橘)' }
 };
 
 // 顏色名稱映射到 script.js 上方的 PALETTE Hex 值
@@ -945,21 +958,28 @@ function stopCamera() {
 window.stopCamera = stopCamera;
 
 // 4. 繪製網格
+// 4. 繪製網格 (含周邊文字提示)
 function drawGrid() {
     const gridCanvas = document.getElementById('grid-canvas');
     const ctx = gridCanvas.getContext('2d');
-    if (gridCanvas.width < 50) return;
+    
+    // 安全檢查：若 Canvas 尺寸異常則不繪製，但仍需回傳物件以免報錯
+    if (gridCanvas.width < 50) return { startX: 0, startY: 0, cellSize: 0 };
 
+    // 清除畫布
     ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.lineWidth = 2;
 
-    const size = Math.min(gridCanvas.width, gridCanvas.height) * 0.6; // 網格佔畫面 60%
+    // 計算網格大小 (佔畫面 60%) 與起始位置
+    const size = Math.min(gridCanvas.width, gridCanvas.height) * 0.6;
     const startX = (gridCanvas.width - size) / 2;
     const startY = (gridCanvas.height - size) / 2;
     const cellSize = size / 3;
 
-    // 畫井字
+    // 設定線條樣式
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 2;
+
+    // 開始繪製井字線
     ctx.beginPath();
     for (let i = 0; i <= 3; i++) {
         // 橫線
@@ -971,6 +991,38 @@ function drawGrid() {
     }
     ctx.stroke();
 
+    // --- [新增] 繪製周邊方向提示文字 ---
+    // 判斷當前是否在有效的掃描步驟內
+    if (currentFaceIndex < SCAN_ORDER.length) {
+        const faceChar = SCAN_ORDER[currentFaceIndex];
+        const hints = ADJACENT_HINTS[faceChar];
+
+        if (hints) {
+            // 文字樣式設定
+            ctx.font = 'bold 32px "JetBrains Mono", monospace';
+            ctx.fillStyle = '#FFD60A'; // 使用亮黃色，在深色背景清楚
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)'; // 黑色陰影增加對比
+            ctx.shadowBlur = 4;
+
+            // 1. 上方提示 (置中)
+            ctx.textAlign = 'center';
+            ctx.fillText(hints.top, startX + size / 2, startY - 25);
+
+            // 2. 下方提示 (置中)
+            ctx.fillText(hints.bottom, startX + size / 2, startY + size + 25);
+
+            // 3. 左方提示 (靠右對齊，貼近網格左側)
+            ctx.textAlign = 'right';
+            ctx.fillText(hints.left, startX - 15, startY + size / 2);
+
+            // 4. 右方提示 (靠左對齊，貼近網格右側)
+            ctx.textAlign = 'left';
+            ctx.fillText(hints.right, startX + size + 15, startY + size / 2);
+        }
+    }
+
+    // 回傳計算好的座標供 detectAndDraw 使用 (重要：不可省略)
     return { startX, startY, cellSize };
 }
 
