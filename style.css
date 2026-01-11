@@ -304,7 +304,8 @@ body {
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: 16px;
+    /* [修正] 增加底部 padding 到 40px，避免播放器或調色盤太貼近螢幕邊緣 */
+    padding: 16px 16px 40px 16px; 
     height: 100%;
     overflow: hidden;
 }
@@ -648,7 +649,8 @@ twisty-player {
     /* 3. 公式區 */
     .panel-solution {
         flex-shrink: 0;
-        padding: 10px 12px;
+        /* [修正] 增加上下 padding (25px) 讓公式區高度變高，視覺更平衡，填補版面 */
+        padding: 25px 12px;
         border-bottom: 1px solid #333;
         z-index: 20;
         width: 100%;
@@ -810,7 +812,8 @@ twisty-player {
     .control-section {
         flex-direction: row;
         gap: 12px;
-        padding-bottom: 12px;
+        /* [修正] 減少下方 padding，拉近與按鈕的距離，消除空白 */
+        padding-bottom: 6px; 
         margin: 0;
         border: none;
     }

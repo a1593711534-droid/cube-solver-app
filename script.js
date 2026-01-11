@@ -1227,6 +1227,20 @@ function processCapturedColors(colorNames) {
         currentWcaScramble = "";
         if(document.getElementById('wca-scramble-text')) 
             document.getElementById('wca-scramble-text').innerText = "相機掃描輸入";
+        
+        // [修正] 掃描完成後，必須清空「打亂反向」與「底十字反向」的舊資料，避免誤導
+        if(document.getElementById('inverse-scramble-text')) 
+            document.getElementById('inverse-scramble-text').innerText = "-";
+            
+        if(document.getElementById('inverse-solution-text')) 
+            document.getElementById('inverse-solution-text').innerText = "-";
+            
+        // 提示需要重新計算
+        const solText = document.getElementById('solution-text');
+        if(solText) {
+            solText.innerText = "掃描完成，請按計算";
+            solText.style.color = "#FFD60A";
+        }
     }
 }
 
