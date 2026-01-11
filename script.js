@@ -833,3 +833,448 @@ function invertAlgString(algStr) {
         return move;
     }).join(" ");
 }
+
+/* =========================================================
+   [新增] 相機掃描功能模組 (整合版)
+   ========================================================= */
+
+let stream = null;
+let currentFaceIndex = 0;
+// 定義掃描順序 (WCA標準展開: 上 -> 右 -> 前 -> 下 -> 左 -> 後)
+// 注意：這裡使用 app 內部的顏色代碼定義
+const SCAN_ORDER = ['U', 'R', 'F', 'D', 'L', 'B'];
+const FACE_LABELS = {
+    'U': '掃描上方 (黃色中心)', 
+    'R': '掃描右側 (橘色中心)', // 注意：這裡的提示僅供參考，實際以使用者手持為主
+    'F': '掃描正面 (綠色中心)', 
+    'D': '掃描下方 (白色中心)', 
+    'L': '掃描左側 (紅色中心)', 
+    'B': '掃描後面 (藍色中心)'
+};
+
+// 顏色名稱映射到 script.js 上方的 PALETTE Hex 值
+const CAM_COLOR_MAP = {
+    'white': 0xFFFFFF,
+    'yellow': 0xFFFF00,
+    'green': 0x00FF00,
+    'red': 0xFF0000,
+    'orange': 0xFFA500,
+    'blue': 0x0000FF
+};
+
+let animationFrameId = null;
+
+// 1. 啟動掃描流程 (由 HTML 按鈕觸發)
+async function startCameraScanFlow() {
+    // 重置 3D 方塊顏色為黑色(代表未填色)，方便使用者觀察進度
+    resetColors(true); // 保留 true 避免清除其他狀態，但在這裡是為了清空顏色
+    
+    // 將所有面先設為黑色，避免混淆
+    cubeGroup.children.forEach(mesh => {
+         // 除了黑色內核，外觀設為深灰，表示待掃描
+        mesh.material.forEach(m => {
+            if(m.color.getHex() !== 0x000000) m.color.setHex(0x333333);
+        });
+    });
+
+    currentFaceIndex = 0;
+    document.getElementById('camera-modal').style.display = 'flex';
+    await startCamera();
+}
+window.startCameraScanFlow = startCameraScanFlow;
+
+// 2. 啟動相機
+async function startCamera() {
+    const video = document.getElementById('video');
+    const faceIndicator = document.getElementById('face-indicator');
+    const gridCanvas = document.getElementById('grid-canvas');
+    const msg = document.getElementById('scan-message');
+
+    try {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // 優先嘗試後置鏡頭
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: 'environment', 
+                width: { ideal: 720 }, 
+                height: { ideal: 720 } 
+            }
+        });
+        
+        video.srcObject = stream;
+
+        await new Promise(resolve => {
+            video.onloadedmetadata = () => {
+                // 調整 canvas 尺寸匹配 video 實際顯示尺寸
+                gridCanvas.width = video.videoWidth;
+                gridCanvas.height = video.videoHeight;
+                resolve();
+            };
+        });
+
+        // 更新 UI
+        if(currentFaceIndex < SCAN_ORDER.length) {
+            faceIndicator.innerText = `${currentFaceIndex + 1}/6: ${FACE_LABELS[SCAN_ORDER[currentFaceIndex]]}`;
+            msg.innerText = "請保持方塊穩定...";
+        }
+        
+        drawGrid();
+        startRealTimeDetection();
+
+    } catch (error) {
+        alert('無法啟動相機，請檢查權限或設備。');
+        console.error('Camera error:', error);
+        stopCamera();
+    }
+}
+
+// 3. 關閉相機
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    stopRealTimeDetection();
+    document.getElementById('camera-modal').style.display = 'none';
+    
+    // 如果中途取消，可選擇是否重置方塊 (這裡選擇不重置，保留部分掃描結果)
+}
+window.stopCamera = stopCamera;
+
+// 4. 繪製網格
+function drawGrid() {
+    const gridCanvas = document.getElementById('grid-canvas');
+    const ctx = gridCanvas.getContext('2d');
+    if (gridCanvas.width < 50) return;
+
+    ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 2;
+
+    const size = Math.min(gridCanvas.width, gridCanvas.height) * 0.6; // 網格佔畫面 60%
+    const startX = (gridCanvas.width - size) / 2;
+    const startY = (gridCanvas.height - size) / 2;
+    const cellSize = size / 3;
+
+    // 畫井字
+    ctx.beginPath();
+    for (let i = 0; i <= 3; i++) {
+        // 橫線
+        ctx.moveTo(startX, startY + i * cellSize);
+        ctx.lineTo(startX + size, startY + i * cellSize);
+        // 直線
+        ctx.moveTo(startX + i * cellSize, startY);
+        ctx.lineTo(startX + i * cellSize, startY + size);
+    }
+    ctx.stroke();
+
+    return { startX, startY, cellSize };
+}
+
+// 5. RGB 轉 HSV (保留原演算法)
+function rgbToHsv(r, g, b) {
+    r /= 255, g /= 255, b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+    let h, s = max === 0 ? 0 : d / max, v = max;
+    if (max === min) h = 0;
+    else {
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return [h * 360, s * 100, v * 100];
+}
+
+// 6. 顏色檢測 (保留原邏輯，微調參數以適配 three.js 顏色)
+function detectColor(r, g, b) {
+    const [h, s, v] = rgbToHsv(r, g, b);
+    
+    // 參數定義 (直接沿用您的參數)
+    const colorRanges = {
+        'orange': { h: [5, 25], s: [20, 100], v: [30, 100] },
+        'red': { h: [350, 5], s: [40, 100], v: [20, 100] },
+        'yellow': { h: [50, 70], s: [50, 100], v: [60, 100] }, // v 從 70 放寬到 60
+        'green': { h: [100, 150], s: [40, 100], v: [30, 100] },
+        'blue': { h: [210, 270], s: [50, 100], v: [30, 100] },
+        'white': { h: [0, 360], s: [0, 25], v: [50, 100] } // 放寬白色的 S 和 V 容許度
+    };
+
+    for (const [color, range] of Object.entries(colorRanges)) {
+        let hInRange;
+        if (color === 'red') {
+            hInRange = (h >= range.h[0] && h <= 360) || (h >= 0 && h <= range.h[1]);
+        } else {
+            hInRange = h >= range.h[0] && h <= range.h[1];
+        }
+        
+        if (hInRange && s >= range.s[0] && s <= range.s[1] && v >= range.v[0] && v <= range.v[1]) {
+            return color;
+        }
+    }
+    return 'white'; // 默認白色
+}
+
+// 7. 即時檢測與防抖 (核心邏輯)
+function startRealTimeDetection() {
+    const video = document.getElementById('video');
+    const gridCanvas = document.getElementById('grid-canvas');
+    const ctx = gridCanvas.getContext('2d');
+    const msg = document.getElementById('scan-message');
+    
+    // 用於內部取樣的 canvas
+    const captureCanvas = document.getElementById('capture-canvas');
+    const capCtx = captureCanvas.getContext('2d');
+
+    let frameCount = 0;
+    const requiredFrames = 20; // 稍微降低幀數加快反應
+    let lastColors = null;
+
+    function detectAndDraw() {
+        if (!video.srcObject || gridCanvas.width < 50) return;
+
+        // 同步內部 canvas 尺寸
+        if (captureCanvas.width !== video.videoWidth) {
+            captureCanvas.width = video.videoWidth;
+            captureCanvas.height = video.videoHeight;
+        }
+
+        capCtx.drawImage(video, 0, 0);
+        
+        // 重新繪製網格與邊框
+        const { startX, startY, cellSize } = drawGrid();
+        
+        const currentFrameColors = [];
+        let isAllWhite = true;
+
+        // 掃描 3x3 九宮格
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                // 取樣中心區域 (GridSize * 0.5)
+                const sampleX = startX + x * cellSize + cellSize * 0.25;
+                const sampleY = startY + y * cellSize + cellSize * 0.25;
+                const sampleW = cellSize * 0.5;
+                
+                const pixelData = capCtx.getImageData(sampleX, sampleY, sampleW, sampleW);
+                let rSum = 0, gSum = 0, bSum = 0;
+                
+                for (let i = 0; i < pixelData.data.length; i += 4) {
+                    rSum += pixelData.data[i];
+                    gSum += pixelData.data[i+1];
+                    bSum += pixelData.data[i+2];
+                }
+                
+                const count = pixelData.data.length / 4;
+                const colorName = detectColor(rSum/count, gSum/count, bSum/count);
+                currentFrameColors.push(colorName);
+
+                if (colorName !== 'white') isAllWhite = false;
+
+                // 在畫面上繪製識別到的顏色框
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = colorName === 'white' ? '#ddd' : colorName;
+                ctx.strokeRect(startX + x * cellSize, startY + y * cellSize, cellSize, cellSize);
+            }
+        }
+
+        // 防抖邏輯
+        if (lastColors && currentFrameColors.every((c, i) => c === lastColors[i])) {
+            frameCount++;
+            if (frameCount > 5) {
+                msg.innerText = `鎖定中... ${(frameCount/requiredFrames*100).toFixed(0)}%`;
+            }
+            
+            if (frameCount >= requiredFrames && !isAllWhite) {
+                cancelAnimationFrame(animationFrameId);
+                showConfirmationButtons(currentFrameColors);
+                msg.innerText = "已鎖定！請確認顏色是否正確";
+                return; // 停止循環
+            }
+        } else {
+            frameCount = 0;
+            lastColors = [...currentFrameColors];
+            msg.innerText = "請保持方塊穩定...";
+            // 移除舊按鈕
+            const oldBtns = document.getElementById('button-container');
+            if(oldBtns) oldBtns.remove();
+        }
+
+        animationFrameId = requestAnimationFrame(detectAndDraw);
+    }
+
+    animationFrameId = requestAnimationFrame(detectAndDraw);
+}
+
+function stopRealTimeDetection() {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    const oldBtns = document.getElementById('button-container');
+    if(oldBtns) oldBtns.remove();
+}
+
+// 8. 顯示確認按鈕 UI
+function showConfirmationButtons(colors) {
+    const container = document.getElementById('camera-container');
+    
+    // 避免重複創建
+    if(document.getElementById('button-container')) return;
+
+    const btnDiv = document.createElement('div');
+    btnDiv.id = 'button-container';
+    
+    const btnConfirm = document.createElement('button');
+    btnConfirm.className = 'confirm-btn';
+    btnConfirm.innerText = '✅ 確認';
+    btnConfirm.onclick = () => processCapturedColors(colors);
+
+    const btnRetry = document.createElement('button');
+    btnRetry.className = 'retry-btn';
+    btnRetry.innerText = '↺ 重試';
+    btnRetry.onclick = () => {
+        btnDiv.remove();
+        startRealTimeDetection();
+    };
+
+    btnDiv.appendChild(btnRetry);
+    btnDiv.appendChild(btnConfirm);
+    container.appendChild(btnDiv);
+}
+
+// 9. 處理捕獲的顏色並應用到 3D 方塊
+function processCapturedColors(colorNames) {
+    const targetFace = SCAN_ORDER[currentFaceIndex];
+    
+    // 將顏色名稱轉換為 HEX
+    const hexColors = colorNames.map(name => CAM_COLOR_MAP[name] || 0x333333);
+    
+    // 應用到 3D 模型
+    applyColorsTo3DFace(targetFace, hexColors);
+    
+    // 進入下一面或結束
+    currentFaceIndex++;
+    
+    // 移除按鈕
+    document.getElementById('button-container').remove();
+
+    if (currentFaceIndex < SCAN_ORDER.length) {
+        // 繼續下一面
+        const faceIndicator = document.getElementById('face-indicator');
+        faceIndicator.innerText = `${currentFaceIndex + 1}/6: ${FACE_LABELS[SCAN_ORDER[currentFaceIndex]]}`;
+        startRealTimeDetection(); // 重新啟動偵測
+    } else {
+        // 完成所有掃描
+        stopCamera();
+        alert('掃描完成！請檢查畫面上的方塊顏色。');
+        
+        // 切換為手動模式標記
+        currentWcaScramble = "";
+        if(document.getElementById('wca-scramble-text')) 
+            document.getElementById('wca-scramble-text').innerText = "相機掃描輸入";
+    }
+}
+
+// 10. [核心] 將 9 個顏色映射到 3D Group 的特定面上
+function applyColorsTo3DFace(faceChar, hexArray) {
+    // hexArray 順序：左上, 中上, 右上, 左中, 中中, 右中, 左下, 中下, 右下 (Row-Major)
+    // 需要找出 cubeGroup 中對應面的 9 個 mesh，並依照空間座標排序以匹配 hexArray
+    
+    // 1. 篩選出該面的 Meshes
+    let faceMeshes = [];
+    cubeGroup.children.forEach(mesh => {
+        const { x, y, z } = mesh.userData;
+        
+        let isFace = false;
+        if (faceChar === 'U' && y === 1) isFace = true;
+        if (faceChar === 'D' && y === -1) isFace = true;
+        if (faceChar === 'R' && x === 1) isFace = true;
+        if (faceChar === 'L' && x === -1) isFace = true;
+        if (faceChar === 'F' && z === 1) isFace = true;
+        if (faceChar === 'B' && z === -1) isFace = true;
+        
+        if (isFace) faceMeshes.push(mesh);
+    });
+
+    // 2. 排序 Meshes 以匹配相機掃描順序 (Row-Major: Top-Left to Bottom-Right)
+    // 注意：3D 座標系中，Y 向上為正，X 向右為正，Z 向前為正
+    
+    faceMeshes.sort((a, b) => {
+        const ad = a.userData;
+        const bd = b.userData;
+        
+        // 排序邏輯視不同面而定
+        if (faceChar === 'U') { 
+            // 上面 (y=1): Z 由負到正 (後->前), X 由負到正 (左->右)
+            // 掃描視角：後排先，還是前排先？通常掃描是 "俯視，綠色在下"
+            // 標準掃描習慣：Row1(Back), Row2, Row3(Front). 
+            // 座標：Z=-1 (Back), Z=0, Z=1 (Front). 
+            // 所以 Z 應該從小到大? 不，相機畫面左上角對應的是 "背面的左邊"。
+            // 讓我們假定標準手持：白上綠前。
+            // 掃描 U 面時，通常是將方塊轉下來，讓 U 面對著鏡頭，此時 "後(B)" 在鏡頭上方，"前(F)" 在鏡頭下方。
+            // 所以 Row1 是 Z=-1, Row2 是 Z=0, Row3 是 Z=1。
+            // Col1 是 L (x=-1), Col2 (x=0), Col3 (x=1)。
+            if (ad.z !== bd.z) return ad.z - bd.z; // Z 小的(後)在先
+            return ad.x - bd.x; // X 小的(左)在先
+        }
+        
+        if (faceChar === 'F') {
+            // 正面 (z=1): Y 由大到小 (上->下), X 由負到正 (左->右)
+            if (ad.y !== bd.y) return bd.y - ad.y; // Y 大的(上)在先
+            return ad.x - bd.x;
+        }
+        
+        if (faceChar === 'R') {
+            // 右面 (x=1): Y 由大到小 (上->下), Z 由大到小 (前->後) ?
+            // 右面掃描時，通常以 "前(F)" 為左邊，"後(B)" 為右邊。
+            // Row1(Top y=1). Col1(Front z=1) -> Col3(Back z=-1).
+            if (ad.y !== bd.y) return bd.y - ad.y;
+            return bd.z - ad.z; // Z 大的(前)在先
+        }
+        
+        if (faceChar === 'B') {
+            // 後面 (z=-1): Y 由大到小, X 由大到小 (因為轉到背面看，原本的右是左)
+            // 視角：背對正面。原本的 Right(x=1) 在背面看是左邊。
+            if (ad.y !== bd.y) return bd.y - ad.y;
+            return bd.x - ad.x; // X 大的在先
+        }
+        
+        if (faceChar === 'L') {
+            // 左面 (x=-1): Y 由大到小, Z 由小到大 (後->前)
+            // 視角：左面看，後(B, z=-1)是左邊，前(F, z=1)是右邊。
+            if (ad.y !== bd.y) return bd.y - ad.y;
+            return ad.z - bd.z; // Z 小的(後)在先
+        }
+        
+        if (faceChar === 'D') {
+            // 下面 (y=-1): 
+            // 視角：翻到底面，通常 "前(F)" 在鏡頭上方，"後(B)" 在鏡頭下方。
+            // Row1(Front z=1), Row3(Back z=-1).
+            if (ad.z !== bd.z) return bd.z - ad.z; // Z 大的(前)在先
+            return ad.x - bd.x;
+        }
+        return 0;
+    });
+
+    // 3. 填色
+    faceMeshes.forEach((mesh, index) => {
+        if (index >= 9) return;
+        
+        // 找出該 Mesh 對應那個面的 Material Index
+        // 根據 createCube 定義: 0:R, 1:L, 2:U, 3:D, 4:F, 5:B
+        let matIdx = -1;
+        if (faceChar === 'R') matIdx = 0;
+        if (faceChar === 'L') matIdx = 1;
+        if (faceChar === 'U') matIdx = 2;
+        if (faceChar === 'D') matIdx = 3;
+        if (faceChar === 'F') matIdx = 4;
+        if (faceChar === 'B') matIdx = 5;
+        
+        if (matIdx !== -1) {
+            mesh.material[matIdx].color.setHex(hexArray[index]);
+        }
+    });
+}

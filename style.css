@@ -93,10 +93,11 @@ body {
     width: 100%;
     background-color: #1a1a1a;
     border: 1px solid #444;
-    color: #fff; /* 輸入框文字白色 */
-    padding: 12px;
+    color: #fff;
+    /* [修正] iOS 為了防止輸入時自動縮放，字體至少需 16px */
+    font-size: 16px;
+    padding: 10px 12px;
     border-radius: 8px;
-    font-size: 14px;
     font-family: var(--font-mono);
     appearance: none;
     -webkit-appearance: none;
@@ -246,15 +247,19 @@ body {
 
 #solution-text {
     font-family: var(--font-mono);
-    /* 修正：字體改小，避免太長時溢出 */
-    font-size: 2rem; 
+    /* [修正] 使用 clamp 讓字體在不同裝置自動調整大小，最小 1.2rem，最大 2rem */
+    font-size: clamp(1.2rem, 5vw, 2rem);
     font-weight: 700;
     color: var(--solution-color);
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.3;
     text-shadow: 0 0 20px rgba(255, 214, 10, 0.2);
+    width: 100%;
     max-width: 95%;
     word-wrap: break-word;
+    /* [修正] 限制最大高度，避免公式太長把整個畫面撐壞，太長可滑動 */
+    max-height: 120px;
+    overflow-y: auto;
 }
 
 .formula-details {
@@ -448,40 +453,240 @@ twisty-player {
 
 
 /* --- 響應式設計 (手機/平板) --- */
+/* --- 響應式設計 (手機/平板) 重寫優化 --- */
 @media (max-width: 900px) {
     .app-grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto; 
-        height: 100dvh;
-        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        height: 100dvh; /* 使用動態視窗高度，解決 Safari 網址列遮擋問題 */
+        overflow: hidden;
     }
 
-    .panel-controls { order: 3; border-right: none; border-top: 1px solid var(--panel-border); padding: 16px; max-height: none; }
-    .main-column { order: 1; display: contents; }
-    
-    .panel-solution { order: 1; padding: 16px; min-height: auto; }
-    
+    /* 1. 上方：公式顯示區 (固定高度，確保可見) */
+    .panel-solution { 
+        order: 1; 
+        padding: 12px; 
+        min-height: auto;
+        flex-shrink: 0; /* 禁止被壓縮 */
+        background-image: none; /* 手機版移除網格背景以提升效能 */
+        border-bottom: 1px solid #333;
+        z-index: 20;
+    }
+
+    /* 2. 中間：3D 工作區 (自適應剩餘空間) */
     .panel-3d { 
         order: 2; 
+        flex: 1; /* 佔據剩餘所有空間 */
         height: auto; 
-        min-height: 500px;
-        padding: 10px;
+        min-height: 0; /* 允許壓縮，防止撐開 */
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
     }
 
     .workspace-wrapper {
         flex-direction: column;
+        gap: 8px;
+        height: 100%;
     }
 
     .workspace-split {
-        min-height: 250px;
+        width: 100%;
+        border-radius: 8px;
     }
 
-    /* 手機版字體調整 */
-    #solution-text { font-size: 1.8rem; }
+    /* 左側預覽視窗：給予固定比例高度，例如佔 40% */
+    .left-pane {
+        flex: 4; 
+        min-height: 150px; /* 確保至少看得到 */
+    }
+
+    /* 右側輸入視窗：佔據剩餘空間 */
+    .right-pane {
+        flex: 6;
+        min-height: 200px;
+    }
+
+    /* 3. 下方：控制面板 (可滑動的抽屜式設計) */
+    .panel-controls { 
+        order: 3; 
+        border-right: none; 
+        border-top: 1px solid var(--panel-border); 
+        padding: 16px; 
+        background: var(--panel-bg);
+        
+        /* 讓控制面板高度不要佔滿，保留上方預覽空間 */
+        flex-shrink: 0;
+        max-height: 40vh; 
+        overflow-y: auto;
+        
+        /* [修正] iPhone X+ 底部安全區域適配 */
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    /* 調整手機上的控制項排列 */
+    .control-section { 
+        flex-direction: row; 
+        flex-wrap: wrap; 
+        gap: 12px; 
+        padding-bottom: 12px;
+    }
     
-    .control-section { flex-direction: row; flex-wrap: wrap; gap: 12px; }
-    .input-group { flex: 1; min-width: 140px; }
+    .input-group { 
+        flex: 1; 
+        min-width: 45%; /* 讓兩個下拉選單並排 */
+    }
+
+    /* 按鈕排列優化 */
+    .action-buttons { 
+        flex-direction: row; 
+        gap: 8px;
+    }
     
-    .action-buttons { flex-direction: row; }
-    .btn { flex: 1; height: 44px; }
+    .btn { 
+        flex: 1; 
+        height: 44px; /* 適合手指點擊的高度 */
+        font-size: 14px;
+        padding: 0 4px;
+    }
+    
+    /* 調整字體大小適應小螢幕 */
+    .solution-header { margin-bottom: 8px; }
+    #solution-text { font-size: 1.5rem; }
+    .footer-note { display: none; /* 手機版隱藏非必要資訊以節省空間 */ }
+}
+
+/* --- [新增] 相機掃描功能樣式 --- */
+
+.btn-scan {
+    background: #2E7D32; /* 深綠色 */
+    color: #fff;
+    border: 1px solid #4CAF50;
+}
+.btn-scan:hover { background: #4CAF50; }
+
+.camera-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    z-index: 9999; /* 最上層 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.camera-header {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111;
+    border-bottom: 1px solid #333;
+}
+
+#face-indicator {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    font-family: var(--font-tech);
+}
+
+.close-camera {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.camera-container {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+}
+
+.video-wrapper {
+    position: relative;
+    width: 320px; /* 預設寬度 */
+    height: 320px;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(1); /* 視情況可能需要翻轉 */
+}
+
+#grid-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+}
+
+.scan-message {
+    margin-top: 20px;
+    color: var(--accent-color);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    text-align: center;
+    min-height: 20px;
+}
+
+/* 確認按鈕容器 */
+#button-container {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    z-index: 20;
+}
+
+.confirm-btn, .retry-btn {
+    padding: 10px 30px;
+    border-radius: 20px;
+    border: none;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.confirm-btn {
+    background-color: var(--accent-color);
+    color: #000;
+}
+
+.retry-btn {
+    background-color: #444;
+    color: #fff;
+}
+
+/* 手機版適配 */
+@media (max-width: 900px) {
+    .video-wrapper {
+        width: 90vw;
+        height: 90vw;
+        max-width: 350px;
+        max-height: 350px;
+    }
 }

@@ -63,6 +63,9 @@
         </div>
 
         <div class="action-buttons">
+            <button class="btn btn-scan" onclick="startCameraScanFlow()">
+                <span class="icon">📷</span> 掃描魔方
+            </button>
             <button class="btn btn-scramble" onclick="window.generateRandomScramble()">
                 <span class="icon">🎲</span> WCA 隨機打亂
             </button>
@@ -155,5 +158,21 @@
 </div>
 
 <script src="script.js" type="module"></script>
+<div id="camera-modal" class="camera-modal" style="display: none;">
+    <div class="camera-header">
+        <div id="face-indicator">準備中...</div>
+        <button class="close-camera" onclick="stopCamera()">×</button>
+    </div>
+    
+    <div id="camera-container" class="camera-container">
+        <div class="video-wrapper">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="grid-canvas"></canvas>
+        </div>
+        <div id="scan-message" class="scan-message">請將方塊對準網格</div>
+    </div>
+    
+    <canvas id="capture-canvas" style="display: none;"></canvas>
+</div>
 </body>
 </html>
