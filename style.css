@@ -451,183 +451,11 @@ twisty-player {
     z-index: 2;
 }
 
-
-/* --- 響應式設計 (手機/平板) --- */
-@media (max-width: 900px) {
-    .app-grid {
-        display: flex;
-        flex-direction: column;
-        height: 100dvh; /* 鎖定螢幕高度，避免捲動 */
-        overflow: hidden;
-    }
-
-    /* 1. 上方：公式結果區 (極致壓縮，只顯示結果) */
-    .panel-solution { 
-        order: 1; 
-        padding: 8px 12px; 
-        min-height: auto;
-        flex-shrink: 0; 
-        border-bottom: 1px solid #333;
-        z-index: 20;
-        gap: 0;
-    }
-
-    /* 手機版隱藏詳細資訊與標題，只留核心結果，爭取空間給 3D 方塊 */
-    .formula-details { display: none !important; }
-    .solution-header { display: none; }
-    #solution-text { 
-        font-size: 1.4rem; 
-        margin: 0; 
-        padding: 4px 0;
-        max-height: none;
-        overflow: visible;
-    }
-
-    /* 2. 中間：3D 工作區 (核心操作區) */
-    .panel-3d { 
-        order: 2; 
-        flex: 1; /* 自動填滿剩餘空間 */
-        height: auto; 
-        min-height: 0; 
-        padding: 0; /* 移除邊距，讓方塊最大化 */
-        display: flex;
-        flex-direction: column;
-        background: #000;
-    }
-
-    .viewport-header { display: none; } /* 隱藏標籤佔位 */
-
-    .workspace-wrapper {
-        flex-direction: column;
-        gap: 0; /* 移除間隙 */
-        height: 100%;
-    }
-
-    .workspace-split {
-        width: 100%;
-        border-radius: 0; /* 移除圓角，滿版顯示 */
-        border: none;
-    }
-
-    /* [關鍵優化] 輸入填色區：移到最上方，佔據主要空間 */
-    .right-pane {
-        order: 1;
-        flex: 1; /* 佔據所有剩餘高度 */
-        min-height: 0; /* 允許壓縮 */
-        border-bottom: 1px solid #333;
-        position: relative;
-    }
-    
-    /* 調整 3D 畫布背景，使其在手機上更融合 */
-    #canvas-wrapper {
-        background: radial-gradient(circle at center, #1a1a1a 0%, #000 90%);
-    }
-
-    /* [關鍵優化] 動畫預覽區：移到下方，縮小高度 */
-    .left-pane {
-        order: 2;
-        height: 120px; /* 固定高度，類似影片播放列 */
-        flex: none; /* 禁止伸縮 */
-        background: #050505;
-        border-top: 1px solid #333;
-    }
-
-    /* 調整預覽區內的播放器比例 */
-    twisty-player {
-        transform: scale(0.9); /* 稍微縮小以免擠壓 */
-    }
-    .pane-label { display: none; } /* 隱藏標籤 */
-
-    /* 3. 下方：控制面板 (操作區) */
-    .panel-controls { 
-        order: 3; 
-        border-right: none; 
-        border-top: 1px solid var(--panel-border); 
-        padding: 12px; 
-        background: var(--panel-bg);
-        
-        /* 確保按鈕區塊永遠可見，不被壓縮 */
-        flex-shrink: 0;
-        max-height: 45vh; 
-        overflow-y: auto;
-        
-        /* iPhone 底部安全區域適配 */
-        padding-bottom: calc(12px + env(safe-area-inset-bottom));
-        gap: 10px;
-    }
-
-    .panel-header { display: none; } /* 隱藏標題 */
-    .hint-text, .subtitle, .footer-note { display: none; } /* 隱藏說明文字 */
-
-    /* 設定選項排列：並排顯示以節省垂直空間 */
-    .control-section { 
-        flex-direction: row; 
-        flex-wrap: wrap; 
-        gap: 8px; 
-        padding-bottom: 8px;
-        margin: 0;
-        border: none;
-    }
-    
-    .input-group { 
-        flex: 1; 
-        min-width: 45%; 
-    }
-    
-    .input-group label {
-        margin-bottom: 4px;
-        font-size: 11px;
-    }
-
-    /* [關鍵優化] 按鈕排列：2x2 格狀排列，更容易點擊且不佔高度 */
-    .action-buttons { 
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 0;
-    }
-    
-    /* 特別讓「掃描」與「計算」按鈕更顯眼 */
-    .btn-scan { grid-column: span 2; } /* 掃描按鈕橫跨整行 */
-    
-    .btn { 
-        height: 42px; 
-        font-size: 14px;
-        margin: 0;
-        white-space: nowrap; /* 防止文字換行 */
-    }
-
-    /* 調整右側面板內的調色盤位置，確保在手指可及範圍 */
-    .palette-container {
-        padding: 8px;
-        background: rgba(17, 17, 17, 0.9);
-        backdrop-filter: blur(5px);
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .palette-container label { display: none; } /* 隱藏 "選色" 標籤 */
-    
-    .color-dot {
-        height: 32px; /* 稍微縮小高度 */
-        min-width: 15%;
-    }
-    
-    /* 調整旋轉按鈕位置，避免擋住方塊 */
-    .rotate-controls {
-        top: 10px;
-        right: 10px;
-        transform: scale(0.9);
-    }
-}
-
-/* --- [新增] 相機掃描功能樣式 --- */
+/* --- 響應式設計 (手機/平板) 最終修復版 --- */
+/* --- [修正] 相機掃描功能與模態視窗樣式 --- */
 
 .btn-scan {
-    background: #2E7D32; /* 深綠色 */
+    background: #2E7D32;
     color: #fff;
     border: 1px solid #4CAF50;
 }
@@ -640,7 +468,7 @@ twisty-player {
     width: 100%;
     height: 100%;
     background-color: #000;
-    z-index: 9999; /* 最上層 */
+    z-index: 9999;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -685,7 +513,7 @@ twisty-player {
 
 .video-wrapper {
     position: relative;
-    width: 320px; /* 預設寬度 */
+    width: 320px;
     height: 320px;
     overflow: hidden;
     border-radius: 12px;
@@ -696,7 +524,7 @@ twisty-player {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleX(1); /* 視情況可能需要翻轉 */
+    transform: scaleX(1);
 }
 
 #grid-canvas {
@@ -717,7 +545,6 @@ twisty-player {
     min-height: 20px;
 }
 
-/* 確認按鈕容器 */
 #button-container {
     position: absolute;
     bottom: 30px;
@@ -739,17 +566,9 @@ twisty-player {
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-.confirm-btn {
-    background-color: var(--accent-color);
-    color: #000;
-}
+.confirm-btn { background-color: var(--accent-color); color: #000; }
+.retry-btn { background-color: #444; color: #fff; }
 
-.retry-btn {
-    background-color: #444;
-    color: #fff;
-}
-
-/* 手機版適配 */
 @media (max-width: 900px) {
     .video-wrapper {
         width: 90vw;
@@ -759,208 +578,251 @@ twisty-player {
     }
 }
 
-/* --- [新增] 手機版 TAB 與懸浮按鈕樣式 (全域) --- */
-.mobile-tabs { display: none; } /* 電腦版預設隱藏 */
-.float-scan-btn { display: none; } /* 電腦版預設隱藏 */
+/* --- [修正] 懸浮相機按鈕 (PC/手機全域顯示) --- */
+.float-scan-btn {
+    display: flex; /* 強制顯示 */
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(46, 125, 50, 0.9);
+    border: 1px solid #4CAF50;
+    color: #fff;
+    font-size: 22px;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    transition: transform 0.2s, background 0.2s;
+}
 
-/* --- 響應式設計 (手機/平板) TAB 優化版 --- */
+.float-scan-btn:hover { 
+    background: #4CAF50; 
+    transform: scale(1.1); 
+}
+
+.float-scan-btn:active { 
+    transform: scale(0.95); 
+}
+
+/* 電腦版隱藏手機分頁按鈕 */
+.mobile-tabs { display: none; }
+
+/* --- 響應式設計 (手機/平板) 最終修復版 --- */
 @media (max-width: 900px) {
+    /* 1. 外層容器：改為垂直排列 */
     .app-grid {
         display: flex;
         flex-direction: column;
-        height: 100dvh;
+        height: 100dvh; /* 鎖定視窗高度 */
+        width: 100vw;   /* 鎖定視窗寬度 */
+        max-width: 100vw;
         overflow: hidden;
     }
 
-    /* 1. 上方：公式結果區 (恢復顯示詳細資訊，但字體縮小) */
-    .panel-solution { 
-        order: 1; 
-        padding: 8px 12px; 
-        flex-shrink: 0; /* 不要壓縮 */
-        border-bottom: 1px solid #333;
-        z-index: 20;
-        min-height: auto;
-        display: block; /* 解除 flex center */
+    /* 2. 主操作區 (包含公式、TAB、3D) */
+    .main-column {
+        order: 1; /* 排在控制面板上方 */
+        flex: 1;  /* 自動佔據剩餘高度 (關鍵：這讓 3D 區有空間) */
+        display: flex;
+        flex-direction: column;
+        height: auto; /* 覆蓋原本的 grid 高度 */
+        overflow: hidden;
+        min-height: 0;
     }
 
-    .solution-header { display: none; } /* 隱藏標題省空間 */
-    
-    .solution-content {
-        align-items: flex-start; /* 靠左對齊 */
+    /* 3. 公式區：防止文字撐開畫面 */
+    .panel-solution {
+        flex-shrink: 0; /* 固定高度 */
+        padding: 8px 12px;
+        border-bottom: 1px solid #333;
+        z-index: 20;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .solution-header { display: none; } /* 隱藏標題 */
+
+    #solution-text {
+        font-size: 1.3rem;
+        margin: 0;
+        text-align: left;
+        padding-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* 太長顯示... */
+    }
+
+    .formula-details {
+        display: flex !important;
+        flex-direction: column;
+        width: 100%;
         gap: 4px;
     }
 
-    #solution-text { 
-        font-size: 1.2rem; /* 結果文字稍微縮小 */
-        margin: 0; 
-        text-align: left;
-        width: 100%;
-        padding-bottom: 4px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    /* 恢復顯示詳細公式，但極致壓縮行距 */
-    .formula-details { 
-        display: flex !important; 
-        width: 100%;
-        margin-top: 4px;
-        padding-top: 0;
-        border: none;
-        gap: 2px;
-    }
-    
     .detail-row {
-        flex-direction: row; /* 左右排列 */
-        align-items: center;
+        display: flex;
+        align-items: flex-start; /* 對齊頂部 */
         gap: 6px;
-        font-size: 10px; /* 字體縮小 */
-    }
-    
-    .detail-row .label { min-width: 70px; } /* 標籤固定寬度 */
-    .detail-row .value { 
-        padding: 2px 4px; 
-        font-size: 10px;
-        white-space: nowrap;
-        overflow-x: auto; /* 過長可滑動 */
-        width: auto;
-        flex: 1;
+        font-size: 11px;
+        width: 100%;
     }
 
-    /* 2. TAB 分頁按鈕 */
+    .detail-row .label { 
+        min-width: 65px; 
+        flex-shrink: 0; 
+    }
+
+    /* [關鍵修正] 強制長文字換行，防止撐開螢幕 */
+    .detail-row .value {
+        font-family: var(--font-mono);
+        white-space: normal; /* 允許換行 */
+        word-break: break-all; /* 強制斷行 */
+        background: rgba(0,0,0,0.3);
+        padding: 2px 6px;
+        border-radius: 4px;
+        flex: 1; /* 佔滿剩餘寬度 */
+        width: 0; /* 配合 flex 讓斷行生效 */
+    }
+
+    /* 4. TAB 分頁 */
     .mobile-tabs {
-        order: 2;
         display: flex;
+        flex-shrink: 0;
         width: 100%;
         background: #111;
         border-bottom: 1px solid #333;
     }
-
+    
     .tab-btn {
         flex: 1;
-        background: transparent;
+        padding: 10px 0;
+        background: none;
         border: none;
         color: #666;
-        padding: 10px 0;
-        font-family: var(--font-tech);
-        font-size: 14px;
         border-bottom: 2px solid transparent;
-        transition: all 0.2s;
+        font-size: 14px;
+        transition: 0.2s;
     }
-
     .tab-btn.active {
         color: var(--accent-color);
         border-bottom-color: var(--accent-color);
         background: rgba(0, 229, 255, 0.05);
     }
 
-    /* 3. 中間：3D 工作區 (TAB 切換邏輯) */
-    .panel-3d { 
-        order: 3; 
-        flex: 1; 
-        padding: 0; 
+    /* 5. 3D 工作區：填滿中間剩餘空間 */
+    .panel-3d {
+        flex: 1; /* 這是讓填色方塊出現的關鍵 */
+        padding: 0;
         display: flex;
         flex-direction: column;
+        min-height: 0; /* 防止內容過多時無法壓縮 */
         background: #000;
-        position: relative;
+        overflow: hidden;
     }
-
-    .viewport-header { display: none; } 
+    
+    .viewport-header { display: none; }
 
     .workspace-wrapper {
+        flex: 1;
+        display: flex;
         flex-direction: column;
         height: 100%;
         width: 100%;
     }
 
-    /* 預設隱藏所有 Split Pane */
     .workspace-split {
-        display: none !important; 
+        display: none !important;
         width: 100%;
         height: 100%;
-        border-radius: 0;
         border: none;
+        border-radius: 0;
     }
 
-    /* 只有加上 .active 的 Pane 才會顯示 (佔滿空間) */
     .workspace-split.active {
         display: flex !important;
     }
 
-    /* [Input Tab] 內容樣式 */
+    /* 調整填色區樣式 */
     .right-pane { position: relative; }
     
     #canvas-wrapper {
+        flex: 1; /* 填滿高度 */
+        width: 100%;
         background: radial-gradient(circle at center, #1a1a1a 0%, #000 90%);
+        overflow: hidden;
     }
 
-    /* [新增] 左上角懸浮相機按鈕 */
-    .float-scan-btn {
-        display: flex;
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: rgba(46, 125, 50, 0.8); /* 半透明綠 */
-        border: 1px solid #4CAF50;
-        color: #fff;
-        font-size: 20px;
-        align-items: center;
-        justify-content: center;
-        z-index: 50;
-        backdrop-filter: blur(4px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    /* 調整調色盤位置 */
+    .palette-container {
+        padding: 8px;
+        background: rgba(17,17,17,0.95);
+        border-top: 1px solid rgba(255,255,255,0.1);
     }
-    .float-scan-btn:active { transform: scale(0.9); background: #4CAF50; }
+    .palette-container label { display: none; }
+    .color-dot { height: 36px; }
 
-    /* 調整旋轉控制項位置，避免擋到相機 */
-    .rotate-controls { top: 10px; right: 10px; }
-
-    /* [Preview Tab] 內容樣式 */
+    /* 預覽區樣式 */
     .left-pane { background: #050505; }
-    twisty-player { transform: scale(1); } /* 恢復原大小 */
+    twisty-player { transform: scale(1); }
     .pane-label { display: none; }
 
-    /* 4. 下方：控制面板 (按鈕區) */
-    .panel-controls { 
-        order: 4; 
-        border-top: 1px solid var(--panel-border); 
-        padding: 10px; 
-        background: var(--panel-bg);
+    /* 6. 底部控制面板 */
+    .panel-controls {
+        order: 2; /* 排在 Main Column 下方 */
         flex-shrink: 0;
+        padding: 10px;
         padding-bottom: calc(10px + env(safe-area-inset-bottom));
-        gap: 8px;
+        background: var(--panel-bg);
+        border-top: 1px solid var(--panel-border);
+        border-right: none;
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
     }
 
     .panel-header, .hint-text, .subtitle, .footer-note, .input-group label { display: none; }
-    
-    .control-section { 
-        flex-direction: row; 
-        gap: 8px; 
+
+    .control-section {
+        flex-direction: row;
+        gap: 8px;
         padding-bottom: 8px;
         margin: 0;
         border: none;
     }
     
-    .input-group { flex: 1; min-width: 0; }
+    .input-group { flex: 1; }
     
-    /* [關鍵] 底部按鈕：單行三分天下 */
-    .action-buttons { 
+    /* 按鈕三分天下 */
+    .action-buttons {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr; /* 三等分 */
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 8px;
         margin-top: 0;
     }
-    
-    /* 按鈕樣式微調 */
-    .btn { 
-        height: 44px; 
-        font-size: 13px; /* 字體稍小以容納文字 */
-        padding: 0;
-        gap: 4px;
+
+    .btn {
+        height: 44px;
+        font-size: 13px;
         margin: 0;
+        padding: 0;
     }
     
-    .btn .icon { font-size: 14px; }
+    /* 確保相機按鈕在手機上樣式正確 */
+    .float-scan-btn {
+        display: flex;
+        top: 10px;
+        left: 10px;
+    }
+    
+    .rotate-controls {
+        top: 10px;
+        right: 10px;
+        transform: scale(0.9);
+    }
 }
