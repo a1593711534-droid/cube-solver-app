@@ -84,20 +84,36 @@ function init() {
     updateFacingOptions();
 }
 
-function createCube() {
+function createCube(isSolved = false) {
     cubeGroup = new THREE.Group();
     const geometry = new THREE.BoxGeometry(0.94, 0.94, 0.94); 
     const coreMat = new THREE.MeshBasicMaterial({ color: 0x000000 }); 
+    
+    // 定義未填色時的貼紙顏色 (深灰色，與黑色核心區分)
+    const EMPTY_COLOR = 0x282828; 
+
     for(let x=-1; x<=1; x++) {
         for(let y=-1; y<=1; y++) {
             for(let z=-1; z<=1; z++) {
+                // 判斷是否為中心塊 (中心塊座標絕對值總和為 1)
+                const isCenter = (Math.abs(x) + Math.abs(y) + Math.abs(z)) === 1;
+                
+                // 決定該面的顏色：
+                // 1. 如果是 WCA 打亂模式 (isSolved=true)，全部填入標準色
+                // 2. 如果是手動模式，只有中心塊填標準色，其餘填空色
+                const getColor = (faceColor) => {
+                    if (isSolved) return faceColor;
+                    if (isCenter) return faceColor;
+                    return EMPTY_COLOR;
+                };
+
                 const mats = [
-                    x===1 ? getMat(FACE_COLORS.R) : coreMat,
-                    x===-1 ? getMat(FACE_COLORS.L) : coreMat,
-                    y===1 ? getMat(FACE_COLORS.U) : coreMat,
-                    y===-1 ? getMat(FACE_COLORS.D) : coreMat,
-                    z===1 ? getMat(FACE_COLORS.F) : coreMat,
-                    z===-1 ? getMat(FACE_COLORS.B) : coreMat
+                    x===1 ? getMat(getColor(FACE_COLORS.R)) : coreMat,
+                    x===-1 ? getMat(getColor(FACE_COLORS.L)) : coreMat,
+                    y===1 ? getMat(getColor(FACE_COLORS.U)) : coreMat,
+                    y===-1 ? getMat(getColor(FACE_COLORS.D)) : coreMat,
+                    z===1 ? getMat(getColor(FACE_COLORS.F)) : coreMat,
+                    z===-1 ? getMat(getColor(FACE_COLORS.B)) : coreMat
                 ];
                 const mesh = new THREE.Mesh(geometry, mats);
                 mesh.position.set(x, y, z);
@@ -186,6 +202,12 @@ function onPointerDown(event) {
     if (intersects.length > 0) {
         const hit = intersects[0];
         const matIndex = hit.face.materialIndex;
+
+        // [新增] 檢查是否為中心塊，如果是則禁止填色
+        const { x, y, z } = hit.object.userData;
+        const isCenter = (Math.abs(x) + Math.abs(y) + Math.abs(z)) === 1;
+        if (isCenter) return;
+
         if (hit.object.material[matIndex].color.getHex() !== 0x000000) {
             hit.object.material[matIndex].color.setHex(currentColorHex);
             
@@ -261,9 +283,10 @@ function handleModeChange() {
 }
 window.handleModeChange = handleModeChange;
 
-function resetColors(keepInfo = false) {
+function resetColors(keepInfo = false, isSolved = false) {
     scene.remove(cubeGroup);
-    createCube();
+    // 傳入 isSolved 參數，決定是否要生成已填滿顏色的方塊
+    createCube(isSolved);
     
     targetRotX = 0.2;
     targetRotY = -0.3;
@@ -312,7 +335,10 @@ async function generateRandomScramble() {
         document.getElementById('wca-scramble-text').innerText = currentWcaScramble;
         document.getElementById('inverse-scramble-text').innerText = invertAlgString(currentWcaScramble);
         
-        resetColors(true); 
+        // [修正] 這裡需要傳入 true, true
+        // 第一個 true: 保留上方的文字資訊 (keepInfo)
+        // 第二個 true: 建立一個已還原的方塊 (isSolved)，因為打亂必須基於還原狀態開始轉
+        resetColors(true, true); 
         applyScrambleToVisualCube(currentWcaScramble);
         solve(true); 
 
